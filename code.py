@@ -249,9 +249,9 @@ class Field:
 
 
 # create and setup playing field
-# field_obj = Field()
-# field_obj.apply_transformation_matrix()
-# field_obj.apply_default_shader()
+field_obj = Field()
+field_obj.apply_transformation_matrix()
+field_obj.apply_default_shader()
 
 dagModifier = OpenMaya.MDagModifier()
 light_mobj = dagModifier.createNode('transform')
