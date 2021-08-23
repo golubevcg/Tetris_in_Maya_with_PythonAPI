@@ -194,14 +194,11 @@ class OpenMayaUtils:
             mtranform_matrix = mfn_transform.transformation()
             mmatrix = mtranform_matrix.asMatrix()
 
-            script_util = OpenMaya.MScriptUtil(0.0)
-            temp_array = script_util.asDouble4Ptr()
-
             new_matrix = []
             for i in range(4):
                 temp_array = []
                 for j in range(4):
-                    temp_array.append(mmatrix(i,j))
+                    temp_array.append(mmatrix(i, j))
                 new_matrix.append(temp_array)
 
             return new_matrix
@@ -219,14 +216,14 @@ class Field:
 
     polygon_count = 250
 
-    transormation_matrix = \
+    transformation_matrix = \
         [[1.0, 0.0, 0.0, 0.0], [0.0, 2.220446049250319e-16, 1.0000000000000029, 0.0], [0.0, -1.0000000000000029, 2.220446049250319e-16, 0.0], [3.83007495075029, 10.974514930158847, 0.9773701434547, 1.0]]
 
     def __init__(self):
         self.field_mobject = OpenMayaUtils.create_mesh(self.polygon_count, self.vertex_positions_raw_data, self.number_of_vertices_per_polygon, self.vertex_indexes_per_polygon)
 
     def apply_transformation_matrix(self):
-        new_mmatrix               = OpenMayaUtils.convert_floats_matrix_to_MMatrix(self.transormation_matrix)  
+        new_mmatrix               = OpenMayaUtils.convert_floats_matrix_to_MMatrix(self.transformation_matrix)
         new_mtrasformation_matrix = OpenMaya.MTransformationMatrix(new_mmatrix)
         mfn_transform             = OpenMaya.MFnTransform(self.field_mobject)
         mfn_transform.set(new_mtrasformation_matrix)
@@ -248,58 +245,76 @@ class Field:
         MDGMod.doIt()
 
 
+def setup_point_light():
+    global mfn_transform
+    dagModifier = OpenMaya.MDagModifier()
+    light_mobj = dagModifier.createNode('transform')
+    dagModifier.renameNode(light_mobj, 'pointLight1')
+    dagModifier.doIt()
+    # create and setup point light
+    mfn_point_light = OpenMaya.MFnPointLight()
+    mfn_point_light.create(light_mobj)
+    mfn_point_light.setIntensity(2)
+    mlight_tranformation_matrix = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0],
+                                   [3.369167279610191, 22.611715134569895, 4.389972436762605, 1.0]]
+    mlight_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(mlight_tranformation_matrix)
+    mlight_mtrasformation_matrix = OpenMaya.MTransformationMatrix(mlight_m_matrix)
+    mfn_transform = OpenMaya.MFnTransform(light_mobj)
+    mfn_transform.set(mlight_mtrasformation_matrix)
+
+
+def setup_camera():
+    global mfn_transform
+    # create camera
+    mfn_cam_obj = OpenMaya.MFnCamera()
+    transform_cam_mobj = mfn_cam_obj.create()
+    # setup camera params
+    mfn_cam_obj.setFocalLength(154)
+    cam_tranformation_matrix = [[0.9477684100095842, 0.0, -0.3189593092980744, 0.0],
+                                [-0.08437068513613653, 0.9643805706617643, -0.2507024180572432, 0.0],
+                                [0.3075981607187592, 0.26451864760369886, 0.9140094401002359, 0.0],
+                                [48.080564005866556, 51.558463195211445, 144.48540158432039, 1.0]]
+    cam_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(cam_tranformation_matrix)
+    cam_mtrasformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
+    mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
+    mfn_transform.set(cam_mtrasformation_matrix)
+    # get mdag path from camera shape
+    mdag_node = OpenMaya.MFnDagNode(transform_cam_mobj)
+    cam_mobj = mdag_node.child(0)
+    cam_m_dagPath = OpenMaya.MDagPath()
+    OpenMaya.MDagPath.getAPathTo(cam_mobj, cam_m_dagPath)
+    # get current active view and set params
+    m3d_view = OpenMayaUI.M3dView.active3dView()
+    m3d_view.setCamera(cam_m_dagPath)
+    m3d_view.refresh()
+
+
+def setup_viewport():
+    import maya.cmds as cmds
+    import maya.mel as mel
+    cur_mp = None
+    for mp in cmds.getPanel(type="modelPanel"):
+        if cmds.modelEditor(mp, q=1, av=1):
+            cur_mp = mp
+            break
+    if cur_mp:
+        # do your stuff
+        new_rndr = "ogsRenderer"
+        cmds.modelEditor(cur_mp, e=1, rnm=new_rndr, displayLights="all", wireframeOnShaded=True)
+        commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;"
+        mel.eval(commands)
+
+
 # create and setup playing field
 field_obj = Field()
 field_obj.apply_transformation_matrix()
 field_obj.apply_default_shader()
 
-dagModifier = OpenMaya.MDagModifier()
-light_mobj = dagModifier.createNode('transform')
-dagModifier.renameNode(light_mobj, 'pointLight1' )
-dagModifier.doIt()
+setup_point_light()
 
-# create and setup point light
-mfn_point_light = OpenMaya.MFnPointLight()
-mfn_point_light.create(light_mobj)
-mfn_point_light.setIntensity(2)
+setup_camera()
 
-mlight_tranformation_matrix = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [3.369167279610191, 22.611715134569895, 4.389972436762605, 1.0]]
-mlight_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(mlight_tranformation_matrix)
-mlight_mtrasformation_matrix = OpenMaya.MTransformationMatrix(mlight_m_matrix)
-mfn_transform             = OpenMaya.MFnTransform(light_mobj)
-mfn_transform.set(mlight_mtrasformation_matrix)
-
-# create camera
-mfn_cam_obj = OpenMaya.MFnCamera()
-transform_cam_mobj = mfn_cam_obj.create()
-# setup camera params
-mfn_cam_obj.setFocalLength(150) 
-cam_tranformation_matrix = [[0.9477684100095842, 0.0, -0.3189593092980744, 0.0], [-0.08437068513613653, 0.9643805706617643, -0.2507024180572432, 0.0], [0.3075981607187592, 0.26451864760369886, 0.9140094401002359, 0.0], [36.264398947420666, 41.73336461138454, 108.696580710739, 1.0]]
-cam_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(cam_tranformation_matrix)
-cam_mtrasformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
-mfn_transform             = OpenMaya.MFnTransform(transform_cam_mobj)
-mfn_transform.set(cam_mtrasformation_matrix)
-
-# get mdag path from camera shape
-mdag_node = OpenMaya.MFnDagNode(transform_cam_mobj)
-cam_mobj = mdag_node.child(0)
-cam_m_dagPath   = OpenMaya.MDagPath()
-OpenMaya.MDagPath.getAPathTo( cam_mobj, cam_m_dagPath )
-
-#get current active view and set params
-m3d_view = OpenMayaUI.M3dView.active3dView()
-m3d_view.setCamera(cam_m_dagPath)
-m3d_view.refresh()
-
-
-
-#set viewport
-#set lighting mode
-#set vireframe
-#enable anti-aliasing
-
-
-
+setup_viewport()
 
 # setup_all figures data
 
