@@ -1,7 +1,7 @@
 import maya.OpenMaya as OpenMaya
 import maya.OpenMayaUI as OpenMayaUI
 import itertools
-from random import randrange
+from random import randint
 import maya.cmds as cmds
 import maya.mel as mel
 
@@ -628,9 +628,9 @@ for i in range(28):
         temp_cache = []
         all_figures_data.append(temp_cache)
 
+print "len(all_figures_data):", len(all_figures_data)
 for i in range(5):
-    rand_mesh_index = randrange(0, 8)
-
+    rand_mesh_index = randint(0, len(all_figures_data)-1)
     # create transform
     figure_transform_mfn_dag = OpenMaya.MFnDagNode()
     figure_transform_mfn_dag.create("transform", "figure_%s"%str(i))
