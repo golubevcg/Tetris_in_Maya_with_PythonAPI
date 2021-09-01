@@ -472,7 +472,7 @@ class Field:
         MDGMod.doIt()
 
 
-def setup_point_light():
+def setup_viewport_lights():
     global mfn_transform
     dagModifier = OpenMaya.MDagModifier()
     light_mobj = dagModifier.createNode('transform')
@@ -488,6 +488,15 @@ def setup_point_light():
     mlight_mtrasformation_matrix = OpenMaya.MTransformationMatrix(mlight_m_matrix)
     mfn_transform = OpenMaya.MFnTransform(light_mobj)
     mfn_transform.set(mlight_mtrasformation_matrix)
+
+    ambient_light_mobj = dagModifier.createNode('transform')
+    dagModifier.renameNode(ambient_light_mobj, 'ambientLight1')
+    dagModifier.doIt()
+
+    # create and setup ambient light
+    mfn_ambient_light = OpenMaya.MFnAmbientLight ()
+    mfn_ambient_light.create(ambient_light_mobj)
+    mfn_ambient_light.setIntensity(0.200)
 
 
 def setup_camera():
@@ -518,6 +527,10 @@ def setup_camera():
     m3d_view.setCamera(cam_m_dagPath)
     m3d_view.refresh()
 
+    cam_name = mdag_node.fullPathName()
+    cmds.select(cam_name)
+    cmds.viewFit()
+
 
 def setup_viewport():
 
@@ -529,8 +542,11 @@ def setup_viewport():
     if cur_mp:
         # do your stuff
         new_rndr = "ogsRenderer"
-        cmds.modelEditor(cur_mp, e=1, rnm=new_rndr, displayLights="all", wireframeOnShaded=True)
-        commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;"
+        cmds.modelEditor(cur_mp, e=1, rnm=new_rndr, displayLights="all", wireframeOnShaded=True, shadows=True)
+        commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
+                   "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
+                   "setAttr \"hardwareRenderingGlobals.ssaoEnable\" 1;" \
+                   "setAttr \"hardwareRenderingGlobals.ssaoRadius\" 10;"
         mel.eval(commands)
 
 
@@ -541,8 +557,8 @@ def create_shader(name, node_type="lambert"):
     return material, sg
 
 
-def create_shader_with_color(color):
-    material_name, sg_name = create_shader("blue_lambert")
+def create_shader_with_color(color, shader_name):
+    material_name, sg_name = create_shader(shader_name)
     cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
     return material_name, sg_name
 
@@ -551,40 +567,37 @@ def generate_all_shaders():
 
     shading_groups_list = []
 
-    blue_color = [3, 65, 174]
-    blue_lambert_name, blue_sg_name = create_shader_with_color(blue_color)
+    blue_color = [0.01, 0.25, 0.68]
+    blue_lambert_name, blue_sg_name = create_shader_with_color(blue_color, "blue_color")
     shading_groups_list.append(blue_sg_name)
 
-    green_color = [114, 203, 59]
-    green_lambert_name, green_sg_name = create_shader_with_color(green_color)
+    green_color = [0, 0.9, 0]
+    green_lambert_name, green_sg_name = create_shader_with_color(green_color, "green_color")
     shading_groups_list.append(green_sg_name)
 
-    yellow_color = [255, 213, 0]
-    yellow_lambert_name, yellow_sg_name = create_shader_with_color(yellow_color)
+    yellow_color = [1, 0.83, 0]
+    yellow_lambert_name, yellow_sg_name = create_shader_with_color(yellow_color, "yellow_color")
     shading_groups_list.append(yellow_sg_name)
 
-    orange_color = [255, 151, 28]
-    orange_lambert_name, orange_sg_name = create_shader_with_color(orange_color)
+    orange_color = [1, 0.14, 0]
+    orange_lambert_name, orange_sg_name = create_shader_with_color(orange_color, "orange_color")
     shading_groups_list.append(orange_sg_name)
 
-    red_color = [255, 50, 19]
-    red_lambert_name, red_sg_name = create_shader_with_color(red_color)
+    red_color = [1, 0, 0.]
+    red_lambert_name, red_sg_name = create_shader_with_color(red_color, "red_color")
     shading_groups_list.append(red_sg_name)
 
     return shading_groups_list
 
 
-# # create and setup playing field
-# field_obj = Field()
-# field_obj.apply_transformation_matrix()
-# field_obj.apply_default_shader()
-#
-# setup_point_light()
-#
-# setup_camera()
-#
-# setup_viewport()
+# create and setup playing field
+field_obj = Field()
+field_obj.apply_transformation_matrix()
+field_obj.apply_default_shader()
 
+setup_viewport()
+setup_viewport_lights()
+setup_camera()
 
 shaders_shading_groups_list = generate_all_shaders()
 
@@ -624,14 +637,12 @@ for i in range(28):
     temp_cache.append(figures_mesh_data[i])
     counter += 1
     if counter == 4:
-        counter = 0
-        temp_cache = []
         all_figures_data.append(temp_cache)
+        temp_cache = []
+        counter = 0
 
-print "len(all_figures_data):", len(all_figures_data)
 for i in range(5):
     rand_mesh_index = randint(0, len(all_figures_data)-1)
-    # create transform
     figure_transform_mfn_dag = OpenMaya.MFnDagNode()
     figure_transform_mfn_dag.create("transform", "figure_%s"%str(i))
     figures_creation_data = all_figures_data[rand_mesh_index]
@@ -641,20 +652,17 @@ for i in range(5):
         vertex_positions_raw_data = data["vertex_positions"]
         polygon_count = data["numPolygons"]
 
+        # at first we need to create center cubes of figures, then we center this transform pivot
+        # after that we create rest of the cubes and add them to transforms too
+        # all, except cube - cube does not need to do this operation, because cube rotation gives nothing
         figure_mobject = OpenMayaUtils.create_mesh(polygon_count, vertex_positions_raw_data,
-                                                   number_of_vertices_per_polygon, vertex_indexes_per_polygon,
-                                                   figure_transform_mfn_dag.object())
+                                                   number_of_vertices_per_polygon, vertex_indexes_per_polygon, figure_transform_mfn_dag.object())
 
-    rand_shader_index = randrange(0,4)
+    rand_shader_index = randint(0, 4)
     rand_shader_shading_group = shaders_shading_groups_list[rand_shader_index]
     figure_name = figure_transform_mfn_dag.fullPathName()
     cmds.sets(figure_name, forceElement=rand_shader_shading_group)
     # # ON EACH FIGURE YOU NEED TO DO NOT FORGET TO PIVOT CENTERING
-
-
-# random figure from 1 to 7
-# setup_all figures data
-# range(1,28) -> each four blocks it is 1 figure
 
 
 # start cycle with falling figures each iteration
