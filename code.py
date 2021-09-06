@@ -636,6 +636,7 @@ field_obj.apply_default_shader()
 setup_viewport()
 setup_viewport_lights()
 setup_camera()
+cmds.refresh()
 
 shaders_shading_groups_list = generate_all_shaders()
 
