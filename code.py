@@ -629,6 +629,21 @@ def generate_random_figure():
     return figure_dag_name
 
 
+def get_mesh_centroid(mesh_name):
+    #UPDATE FOR EACH CHILD SHAPE
+    if not mesh_name or not cmds.objExists(mesh_name):
+        return
+
+    points_amount = cmds.polyEvaluate(mesh_name, vertex=True)
+    accumulated_x = 0.0
+    accumulated_y = 0.0
+    for i in range(points_amount):
+        current_point_position = cmds.pointPosition("%s.vtx[%s]" % (mesh_name, str(i)), world=True)
+        accumulated_x += current_point_position[0]
+        accumulated_y += current_point_position[1]
+    cube_center = [accumulated_x / points_amount, accumulated_y / points_amount]
+    return cube_center
+
 field_obj = Field()
 field_obj.apply_transformation_matrix()
 field_obj.apply_default_shader()
@@ -650,16 +665,35 @@ continue_game = True
 test_break_counter = 0
 active_figure_name = ""
 
-while test_break_counter < 50:
-    if test_break_counter % 10 == 0 or test_break_counter == 0:
-        active_figure_name = generate_random_figure()
+min_y = 0.5
+min_x = -4.5
+max_x =  4.5
 
+go_next_figure = False
+while test_break_counter < 50:
+    if test_break_counter % 10 == 0 or test_break_counter == 0 or go_next_figure:
+        active_figure_name = generate_random_figure()
+    # UPDATE FOR EACH CHILD SHAPE NOT SINGLE CENTROID
+    current_centroid = get_mesh_centroid(active_figure_name)
     current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
     changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
     cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
-    test_break_counter += 1
-    cmds.refresh()
-    time.sleep(1)
+    if min_x < current_centroid[0] < max_x and current_centroid[1] > min_y:
+        test_break_counter += 1
+        cmds.refresh()
+        time.sleep(1)
+        continue
+    else:
+        cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
+        go_next_figure = True
+
+#FASTER UPDATE x30 per second
+#LOCK MIN Y VALUE, LOCK MAX AND MIN X VALUE
+
+
+#each shape with no parent later parent
+# if main parent bbox intersects then check other shapes intersection
+#for each shape check boundbox intersects with other shapes and bg field
 
 # start cycle with falling figures each iteration
 # figure out moment of collision with other figures
