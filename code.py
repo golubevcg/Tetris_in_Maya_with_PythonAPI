@@ -629,7 +629,7 @@ def generate_random_figure():
     return figure_dag_name
 
 
-def get_mesh_centroid(mesh_name):
+def get_shape_xy_centroid(mesh_name):
     #UPDATE FOR EACH CHILD SHAPE
     if not mesh_name or not cmds.objExists(mesh_name):
         return
@@ -643,6 +643,38 @@ def get_mesh_centroid(mesh_name):
         accumulated_y += current_point_position[1]
     cube_center = [accumulated_x / points_amount, accumulated_y / points_amount]
     return cube_center
+
+
+def check_mesh_update_allowed(mesh_name, locked_cells_list):
+
+    global min_x, max_x, min_y
+
+    child_shapes = cmds.listRelatives(mesh_name, children=True)
+    if not child_shapes:
+        return False
+
+    for child in child_shapes:
+        current_xy_centroid = get_shape_xy_centroid(child)
+        if not min_x < current_xy_centroid[0] < max_x or not min_y < current_xy_centroid[1] < max_y:
+            return False
+        elif tuple(current_xy_centroid) in locked_cells_list:
+            return False
+        
+    return True
+
+
+def fill_locked_cells_list(mesh_name, locked_cells_list):
+    global min_x, max_x, min_y
+
+    child_shapes = cmds.listRelatives(mesh_name, children=True, allDescendents=True, shapes=True)
+    if not child_shapes:
+        return
+
+    for child in child_shapes:
+        current_xy_centroid = get_shape_xy_centroid(child)
+        if current_xy_centroid not in locked_cells_list:
+            locked_cells_list.append(tuple(current_xy_centroid))
+
 
 field_obj = Field()
 field_obj.apply_transformation_matrix()
@@ -666,27 +698,34 @@ test_break_counter = 0
 active_figure_name = ""
 
 min_y = 0.5
+max_y = 20.5
 min_x = -4.5
 max_x =  4.5
+locked_cells_list = []
 
-go_next_figure = False
+go_next_figure = True
+active_figure_name = generate_random_figure()
+
 while test_break_counter < 50:
-    if test_break_counter % 10 == 0 or test_break_counter == 0 or go_next_figure:
+    if go_next_figure:
         active_figure_name = generate_random_figure()
-    # UPDATE FOR EACH CHILD SHAPE NOT SINGLE CENTROID
-    current_centroid = get_mesh_centroid(active_figure_name)
+    go_next_figure=False
+
     current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
     changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
     cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
-    if min_x < current_centroid[0] < max_x and current_centroid[1] > min_y:
-        test_break_counter += 1
-        cmds.refresh()
-        time.sleep(1)
-        continue
-    else:
+
+    transform_update_allowed = check_mesh_update_allowed(active_figure_name, locked_cells_list)
+    # print "transform_update_allowed:", transform_update_allowed
+    if not transform_update_allowed:
         cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
         go_next_figure = True
 
+    fill_locked_cells_list(active_figure_name, locked_cells_list)
+
+    test_break_counter += 1
+    cmds.refresh()
+    time.sleep(1)
 #FASTER UPDATE x30 per second
 #LOCK MIN Y VALUE, LOCK MAX AND MIN X VALUE
 
