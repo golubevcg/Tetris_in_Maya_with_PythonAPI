@@ -630,7 +630,7 @@ def generate_random_figure():
 
 
 def get_shape_xy_centroid(mesh_name):
-    #UPDATE FOR EACH CHILD SHAPE
+
     if not mesh_name or not cmds.objExists(mesh_name):
         return
 
@@ -641,12 +641,30 @@ def get_shape_xy_centroid(mesh_name):
         current_point_position = cmds.pointPosition("%s.vtx[%s]" % (mesh_name, str(i)), world=True)
         accumulated_x += current_point_position[0]
         accumulated_y += current_point_position[1]
-    cube_center = [accumulated_x / points_amount, accumulated_y / points_amount]
+
+    rounded_x_value = round(accumulated_x / points_amount, 1)
+    rounded_y_value = round(accumulated_y / points_amount, 1)
+
+    cube_center = {(rounded_x_value, rounded_y_value):mesh_name}
     return cube_center
 
 
-def check_mesh_update_allowed(mesh_name, locked_cells_list):
+def get_all_child_shapes_xy_centroids_list(parent_transform):
+    if not parent_transform:
+        return
 
+    child_shapes = cmds.listRelatives(parent_transform, children=True)
+    if not child_shapes:
+        return
+
+    result_list = []
+    for child in child_shapes:
+        current_xy_centroid = get_shape_xy_centroid(child)
+        result_list.append(current_xy_centroid)
+
+    return result_list
+
+def check_mesh_update_allowed(mesh_name, locked_cells_list):
     global min_x, max_x, min_y
 
     child_shapes = cmds.listRelatives(mesh_name, children=True)
@@ -655,25 +673,30 @@ def check_mesh_update_allowed(mesh_name, locked_cells_list):
 
     for child in child_shapes:
         current_xy_centroid = get_shape_xy_centroid(child)
-        if not min_x < current_xy_centroid[0] < max_x or not min_y < current_xy_centroid[1] < max_y:
+        coords = current_xy_centroid.keys()[0]
+        if not min_x < coords[0] < max_x or not min_y < coords[1] < max_y:
+            print "false0"
             return False
-        elif tuple(current_xy_centroid) in locked_cells_list:
+        elif tuple(coords) in locked_cells_list and child != current_xy_centroid[coords]:
+            print "false1"
             return False
         
     return True
 
 
-def fill_locked_cells_list(mesh_name, locked_cells_list):
+def update_locked_cells_list(mesh_name, locked_cells_list, cleanup_previous_locked_cells=None):
     global min_x, max_x, min_y
+
+    if cleanup_previous_locked_cells:
+        for val in cleanup_previous_locked_cells:
+            if val in locked_cells_list:
+                locked_cells_list.remove(val)
 
     child_shapes = cmds.listRelatives(mesh_name, children=True, allDescendents=True, shapes=True)
     if not child_shapes:
         return
 
-    for child in child_shapes:
-        current_xy_centroid = get_shape_xy_centroid(child)
-        if current_xy_centroid not in locked_cells_list:
-            locked_cells_list.append(tuple(current_xy_centroid))
+    locked_cells_list.extend(get_all_child_shapes_xy_centroids_list(mesh_name))
 
 
 field_obj = Field()
@@ -697,22 +720,22 @@ continue_game = True
 test_break_counter = 0
 active_figure_name = ""
 
-min_y = 0.5
-max_y = 20.5
-min_x = -4.5
-max_x =  4.5
+min_y = 0
+max_y = 24 #21.5
+min_x = -4
+max_x =  4
 locked_cells_list = []
 
 go_next_figure = True
-active_figure_name = generate_random_figure()
-
-while test_break_counter < 50:
+while test_break_counter < 40:
     if go_next_figure:
         active_figure_name = generate_random_figure()
     go_next_figure=False
 
     current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
     changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
+
+    stored_centroids_before_translate = get_all_child_shapes_xy_centroids_list(active_figure_name)
     cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
 
     transform_update_allowed = check_mesh_update_allowed(active_figure_name, locked_cells_list)
@@ -721,11 +744,15 @@ while test_break_counter < 50:
         cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
         go_next_figure = True
 
-    fill_locked_cells_list(active_figure_name, locked_cells_list)
+    if go_next_figure:
+        update_locked_cells_list(active_figure_name, locked_cells_list)
+    else:
+        update_locked_cells_list(active_figure_name, locked_cells_list, cleanup_previous_locked_cells=stored_centroids_before_translate)
 
+    print "len(locked_cells_list)", len(locked_cells_list)
     test_break_counter += 1
     cmds.refresh()
-    time.sleep(1)
+    time.sleep(0.1)
 #FASTER UPDATE x30 per second
 #LOCK MIN Y VALUE, LOCK MAX AND MIN X VALUE
 
