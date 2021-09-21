@@ -580,7 +580,7 @@ def generate_all_shaders():
     yellow_lambert_name, yellow_sg_name = create_shader_with_color(yellow_color, "yellow_color")
     shading_groups_list.append(yellow_sg_name)
 
-    orange_color = [1, 0.14, 0]
+    orange_color = [1, 0.28, 0]
     orange_lambert_name, orange_sg_name = create_shader_with_color(orange_color, "orange_color")
     shading_groups_list.append(orange_sg_name)
 
@@ -747,7 +747,7 @@ max_x =  4
 locked_cells_dict = dict()
 
 go_next_figure = True
-while test_break_counter < 50:
+while test_break_counter < 100:
     if go_next_figure:
         active_figure_name = generate_random_figure()
     go_next_figure=False
