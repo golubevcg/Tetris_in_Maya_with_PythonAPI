@@ -754,26 +754,6 @@ while test_break_counter < 50:
 
     go_next_figure = move_figure(active_figure_name, "translateY", locked_cells_dict, go_next_figure)
 
-    # cmds.nameCommand( 'func_left_arrow', annotation='func_left_arrow', command='python("move_figure({0}, {1}, {2}, {3}, transform_value={4})")'.format(active_figure_name, "translateX", locked_cells_dict, go_next_figure, 1.0))
-    # cmds.nameCommand( 'func_left_arrow', annotation='func_left_arrow', command='python("print("tralalal"))')
-    # cmds.hotkey( k='Left', alt=True, name='func_left_arrow' )
-
-    # current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
-    # changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
-
-    # stored_centroids_before_translate = dict()
-    # get_all_child_shapes_xy_centroids_list(active_figure_name, stored_centroids_before_translate)
-    # cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
-
-    # transform_update_allowed = check_mesh_update_allowed(active_figure_name, locked_cells_dict)
-
-    # if not transform_update_allowed:
-    #     cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
-    #     go_next_figure = True
-
-    # update_locked_cells_list(active_figure_name, locked_cells_dict,
-    #                          cleanup_previous_locked_cells=stored_centroids_before_translate)
-
     test_break_counter += 1
     cmds.refresh()
     time.sleep(0.1)
