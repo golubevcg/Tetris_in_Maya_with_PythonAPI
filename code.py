@@ -695,6 +695,30 @@ def update_locked_cells_list(mesh_name, locked_cells_dict, cleanup_previous_lock
     get_all_child_shapes_xy_centroids_list(mesh_name, locked_cells_dict)
 
 
+def move_figure(figure_name, direction, locked_cells_dict, go_next_figure, transform_value=-1.0):
+
+    current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, direction)
+    changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
+    # сдвинуть в нужном направлении
+    # проверить что сдвиг возможен
+    # если нет - то вернуть фигуру назад
+    # обновить вьюпорт
+
+    stored_centroids_before_translate = dict()
+    get_all_child_shapes_xy_centroids_list(figure_name, stored_centroids_before_translate)
+    cmds.setAttr(current_figure_translate_y_attr_name, changed_position + transform_value)
+
+    transform_update_allowed = check_mesh_update_allowed(figure_name, locked_cells_dict)
+    if not transform_update_allowed:
+        cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
+        go_next_figure = True
+
+    update_locked_cells_list(figure_name, locked_cells_dict,
+                             cleanup_previous_locked_cells=stored_centroids_before_translate)
+
+    return go_next_figure
+
+
 field_obj = Field()
 field_obj.apply_transformation_matrix()
 field_obj.apply_default_shader()
@@ -717,32 +741,38 @@ test_break_counter = 0
 active_figure_name = ""
 
 min_y = 0
-max_y = 24 #21.5
+max_y = 24
 min_x = -4
 max_x =  4
 locked_cells_dict = dict()
 
 go_next_figure = True
-while test_break_counter < 100:
+while test_break_counter < 50:
     if go_next_figure:
         active_figure_name = generate_random_figure()
     go_next_figure=False
 
-    current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
-    changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
+    go_next_figure = move_figure(active_figure_name, "translateY", locked_cells_dict, go_next_figure)
 
-    stored_centroids_before_translate = dict()
-    get_all_child_shapes_xy_centroids_list(active_figure_name, stored_centroids_before_translate)
-    cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
+    # cmds.nameCommand( 'func_left_arrow', annotation='func_left_arrow', command='python("move_figure({0}, {1}, {2}, {3}, transform_value={4})")'.format(active_figure_name, "translateX", locked_cells_dict, go_next_figure, 1.0))
+    # cmds.nameCommand( 'func_left_arrow', annotation='func_left_arrow', command='python("print("tralalal"))')
+    # cmds.hotkey( k='Left', alt=True, name='func_left_arrow' )
 
-    transform_update_allowed = check_mesh_update_allowed(active_figure_name, locked_cells_dict)
-    # print "transform_update_allowed:", transform_update_allowed
-    if not transform_update_allowed:
-        cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
-        go_next_figure = True
+    # current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
+    # changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
 
-    update_locked_cells_list(active_figure_name, locked_cells_dict,
-                             cleanup_previous_locked_cells=stored_centroids_before_translate)
+    # stored_centroids_before_translate = dict()
+    # get_all_child_shapes_xy_centroids_list(active_figure_name, stored_centroids_before_translate)
+    # cmds.setAttr(current_figure_translate_y_attr_name, changed_position - 1)
+
+    # transform_update_allowed = check_mesh_update_allowed(active_figure_name, locked_cells_dict)
+
+    # if not transform_update_allowed:
+    #     cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
+    #     go_next_figure = True
+
+    # update_locked_cells_list(active_figure_name, locked_cells_dict,
+    #                          cleanup_previous_locked_cells=stored_centroids_before_translate)
 
     test_break_counter += 1
     cmds.refresh()
