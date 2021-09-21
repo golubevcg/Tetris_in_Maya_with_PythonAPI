@@ -658,7 +658,8 @@ def get_all_child_shapes_xy_centroids_list(parent_transform, result_dict):
 
     for child in child_shapes:
         current_xy_centroid = get_shape_xy_centroid(child)
-        result_dict[current_xy_centroid] = child
+        temp_dict = {"parent_transform_name":parent_transform, "child_shape_name":child}
+        result_dict[current_xy_centroid] = temp_dict
 
 
 def check_mesh_update_allowed(mesh_name, locked_cells_dict):
@@ -670,20 +671,12 @@ def check_mesh_update_allowed(mesh_name, locked_cells_dict):
 
     for child in child_shapes:
         child_cords = get_shape_xy_centroid(child)
-        print "\nchild_cords", child_cords, tuple(child_cords) in locked_cells_dict.keys()
-        print "\tchild:", child
-        try:
-            print "\t-locked_cells_dict[child_cords]:", locked_cells_dict[child_cords]
-        except Exception as e:
-            pass
 
         if not min_x < child_cords[0] < max_x or not min_y < child_cords[1] < max_y:
-            print "false0"
             return False
-        elif tuple(child_cords) in locked_cells_dict.keys() and child != locked_cells_dict[child_cords]:
-            print "false1"
+        elif tuple(child_cords) in locked_cells_dict.keys() and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
             return False
-    print "---RETURNED:true"
+
     return True
 
 
@@ -730,12 +723,10 @@ max_x =  4
 locked_cells_dict = dict()
 
 go_next_figure = True
-while test_break_counter < 40:
+while test_break_counter < 100:
     if go_next_figure:
         active_figure_name = generate_random_figure()
     go_next_figure=False
-
-    print "locked_cells_dict:", locked_cells_dict
 
     current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, "translateY")
     changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
