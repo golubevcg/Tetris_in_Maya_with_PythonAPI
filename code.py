@@ -758,6 +758,7 @@ while test_break_counter < 100:
     cmds.refresh()
     time.sleep(0.1)
 
+
 #FASTER UPDATE x30 per second
 #LOCK MIN Y VALUE, LOCK MAX AND MIN X VALUE
 
