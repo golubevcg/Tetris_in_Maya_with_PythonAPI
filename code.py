@@ -5,6 +5,25 @@ from random import randint
 import maya.cmds as cmds
 import maya.mel as mel
 import time
+from functools import partial
+
+try:
+    from PySide2.QtCore import * 
+    from PySide2.QtGui import * 
+    from PySide2.QtWidgets import *
+    from PySide2 import __version__
+    from shiboken2 import wrapInstance 
+except ImportError:
+    from PySide.QtCore import * 
+    from PySide.QtGui import * 
+    from PySide import __version__
+    from shiboken import wrapInstance 
+
+from PySide2 import QtCore, QtWidgets
+import shiboken2
+import maya.cmds as cmds
+import maya.mel as mel
+import maya.OpenMayaUI as OpenMayaUI
 
 
 class OpenMayaUtils:
@@ -500,10 +519,11 @@ def setup_viewport_lights():
     mfn_ambient_light.setIntensity(0.200)
 
 
-def setup_camera():
+def setup_camera(camera_name):
 
+    mobj = OpenMayaUtils.make_depend_node(camera_name)
     # create camera
-    mfn_cam_obj = OpenMaya.MFnCamera()
+    mfn_cam_obj = OpenMaya.MFnCamera(mobj)
     transform_cam_mobj = mfn_cam_obj.create()
 
     # setup camera params
@@ -533,17 +553,16 @@ def setup_camera():
     cmds.viewFit()
 
 
-def setup_viewport():
+def setup_viewport(modelPanel_name):
+    # if not modelPanel_name:
+    #     for mp in cmds.getPanel(type="modelPanel"):
+    #         if cmds.modelEditor(mp, q=1, av=1):
+    #             modelPanel_name = mp
+    #             break
 
-    cur_mp = None
-    for mp in cmds.getPanel(type="modelPanel"):
-        if cmds.modelEditor(mp, q=1, av=1):
-            cur_mp = mp
-            break
-    if cur_mp:
-        # do your stuff
+    if modelPanel_name:
         new_rndr = "ogsRenderer"
-        cmds.modelEditor(cur_mp, e=1, rnm=new_rndr, displayLights="all", wireframeOnShaded=True, shadows=True)
+        cmds.modelEditor(modelPanel_name, e=1, rnm=new_rndr, displayLights="all", wireframeOnShaded=True, shadows=True)
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.ssaoEnable\" 1;" \
@@ -695,6 +714,30 @@ def update_locked_cells_list(mesh_name, locked_cells_dict, cleanup_previous_lock
     get_all_child_shapes_xy_centroids_list(mesh_name, locked_cells_dict)
 
 
+def transform_figure():
+    global active_figure_name
+    print "active_figure_name:", active_figure_name
+    current_figure_translate_x_attr_name = "%s.%s" % (active_figure_name, "translateX")
+    changed_position = cmds.getAttr(current_figure_translate_x_attr_name)
+    cmds.setAttr(current_figure_translate_x_attr_name, changed_position + 1)
+    cmds.refresh()
+    print "current_figure_translate_x_attr_name:", current_figure_translate_x_attr_name
+
+
+def init_shortcut(shortcut):
+    shortcut = QShortcut(QKeySequence(shortcut), get_main_maya_window())
+    # shortcut.setContext(Qt.ApplicationShortcut)
+    shortcut.activated.connect(partial(transform_figure, shortcut))
+
+
+def get_main_maya_window():
+
+    mayaMainWindowPtr = OpenMayaUI.MQtUtil.mainWindow()
+    mayaMainWindow = wrapInstance(long(mayaMainWindowPtr), QWidget)
+
+    return mayaMainWindow
+
+
 def move_figure(figure_name, direction, locked_cells_dict, go_next_figure, transform_value=-1.0):
 
     current_figure_translate_y_attr_name = "%s.%s" % (active_figure_name, direction)
@@ -719,13 +762,81 @@ def move_figure(figure_name, direction, locked_cells_dict, go_next_figure, trans
     return go_next_figure
 
 
+class MyDialog(QtWidgets.QDialog):
+    def keyPressEvent(self, e):
+        print "Hahahahhahaha"
+        # on escape delete all created nodes, enable viewport and exit application
+
+    def __init__(self, parent, **kwargs):
+        super(MyDialog, self).__init__(parent, **kwargs)
+        
+        self.setObjectName("MyWindow")
+        self.resize(800, 600)
+        self.setWindowTitle("PyQt ModelPanel Test")
+
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
+        self.verticalLayout.setContentsMargins(0,0,0,0)
+
+        # need to set a name so it can be referenced by maya node path
+        self.verticalLayout.setObjectName("mainLayout")
+        
+        # First use SIP to unwrap the layout into a pointer
+        # Then get the full path to the UI in maya as a string
+        layout = OpenMayaUI.MQtUtil.fullName(long(shiboken2.getCppPointer(self.verticalLayout)[0]))
+        cmds.setParent(layout)
+
+        paneLayoutName = cmds.paneLayout()
+        
+        # Find a pointer to the paneLayout that we just created
+        ptr = OpenMayaUI.MQtUtil.findControl(paneLayoutName)
+        
+        # Wrap the pointer into a python QObject
+        self.paneLayout = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+
+        self.cameraName = cmds.camera()[0]
+        self.modelPanelName = cmds.modelPanel("customModelPanel", label="ModelPanel Test", cam=self.cameraName)
+        
+        # Find a pointer to the modelPanel that we just created
+        ptr = OpenMayaUI.MQtUtil.findControl(self.modelPanelName)
+        
+        # Wrap the pointer into a python QObject
+        self.modelPanel = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+
+        # add our QObject reference to the paneLayout to our layout
+        self.verticalLayout.addWidget(self.paneLayout)
+
+    def showEvent(self, event):
+        super(MyDialog, self).showEvent(event)
+
+        # maya can lag in how it repaints UI. Force it to repaint
+        # when we show the window.
+        self.modelPanel.repaint()
+                    
+
+def show():
+    # get a pointer to the maya main window
+    ptr = OpenMayaUI.MQtUtil.mainWindow()
+
+    # use sip to wrap the pointer into a QObject
+    win = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+    d = MyDialog(win)
+    d.show()
+
+    return d
+
+
+#disable main viewport
+# mel.eval("paneLayout -e -manage false $gMainPane")
+dialog = show()
+
+
 field_obj = Field()
 field_obj.apply_transformation_matrix()
 field_obj.apply_default_shader()
 
-setup_viewport()
+setup_viewport(dialog.modelPanelName)
 setup_viewport_lights()
-setup_camera()
+setup_camera(dialog.cameraName)
 cmds.refresh()
 
 shaders_shading_groups_list = generate_all_shaders()
@@ -745,6 +856,14 @@ max_y = 24
 min_x = -4
 max_x =  4
 locked_cells_dict = dict()
+
+# cmds.setFocus("MayaWindow")
+init_shortcut(Qt.Key_Left)
+init_shortcut(Qt.Key_Right)
+init_shortcut(Qt.Key_Up)
+init_shortcut(Qt.Key_Down)
+init_shortcut(Qt.Key_Space)
+init_shortcut(Qt.Key_Escape)
 
 go_next_figure = True
 while test_break_counter < 100:
