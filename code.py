@@ -766,6 +766,7 @@ class MyDialog(QtWidgets.QDialog):
     def keyPressEvent(self, e):
         print "Hahahahhahaha"
         # on escape delete all created nodes, enable viewport and exit application
+        # on destructor do the same cleaning process
 
     def __init__(self, parent, **kwargs):
         super(MyDialog, self).__init__(parent, **kwargs)
