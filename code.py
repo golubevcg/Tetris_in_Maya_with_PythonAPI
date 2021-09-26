@@ -8,16 +8,16 @@ import time
 from functools import partial
 
 try:
-    from PySide2.QtCore import * 
-    from PySide2.QtGui import * 
+    from PySide2.QtCore import *
+    from PySide2.QtGui import *
     from PySide2.QtWidgets import *
     from PySide2 import __version__
-    from shiboken2 import wrapInstance 
+    from shiboken2 import wrapInstance
 except ImportError:
-    from PySide.QtCore import * 
-    from PySide.QtGui import * 
+    from PySide.QtCore import *
+    from PySide.QtGui import *
     from PySide import __version__
-    from shiboken import wrapInstance 
+    from shiboken import wrapInstance
 
 from PySide2 import QtCore, QtWidgets
 import shiboken2
@@ -64,7 +64,7 @@ class OpenMayaUtils:
         """
         Returns vertex positions of given mesh.
         :param mesh: string dag path to mesh
-        :param as_mpoint_array: if True, function will return vertex positions as array of OpenMaya.MPoint objects, 
+        :param as_mpoint_array: if True, function will return vertex positions as array of OpenMaya.MPoint objects,
                                 by defaul False mean it will return vertex positions as as floats array
         :returns list: by default returns list of integers with point coordinates, with as_mpoint_array=True will returns list of MPoint objects.
         """
@@ -96,7 +96,7 @@ class OpenMayaUtils:
     def get_polygon_vertex_ids(mfn_mesh):
 
         """
-        Returns polygon vertex ids for given mesh. 
+        Returns polygon vertex ids for given mesh.
         (what vertex each polygon have, vertex defined by vertex id)
         :param mesh: string dag path to mesh
         :returns list: list of vertex id's per polygon
@@ -179,7 +179,7 @@ class OpenMayaUtils:
     def get_plug_by_name(inObj, inPlugName):
         """
         Gets a node's plug as an MPlug.
-        
+
         @inObj: MObject. Node to get plug from.
         @inPlugName: String. Name of plug to get from node.
         @return: MPlug.
@@ -491,18 +491,22 @@ class Field:
         MDGMod.connect(field_shape_grups_mplug_zero_index, dag_set_memb_mplug_zero_index)
         MDGMod.doIt()
 
+
 class TetrisDialog(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
         print "Hahahahhahaha"
         # on escape delete all created nodes, enable viewport and exit application
         # on destructor do the same cleaning process
+        # if e.
+        self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict,self.go_next_figure)
+        cmds.refresh()
 
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
-        
+
         self.setObjectName("MyWindow")
-        self.resize(800, 600)
+        self.resize(600, 800)
         self.setWindowTitle("PyQt ModelPanel Test")
 
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
@@ -510,25 +514,28 @@ class TetrisDialog(QtWidgets.QDialog):
 
         # need to set a name so it can be referenced by maya node path
         self.verticalLayout.setObjectName("mainLayout")
-        
+
         # First use SIP to unwrap the layout into a pointer
         # Then get the full path to the UI in maya as a string
         layout = OpenMayaUI.MQtUtil.fullName(long(shiboken2.getCppPointer(self.verticalLayout)[0]))
         cmds.setParent(layout)
 
         paneLayoutName = cmds.paneLayout()
-        
+
         # Find a pointer to the paneLayout that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(paneLayoutName)
-        
+
         # Wrap the pointer into a python QObject
         self.paneLayout = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
-        self.modelPanelName = cmds.modelPanel("customModelPanel", label="ModelPanel Test", cam=self.cameraName)
-        cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", wireframeOnShaded=True, shadows=True, headsUpDisplay=False)
+        self.modelPanelName = "customModelPanel"
+        self.modelPanelName = cmds.modelPanel(self.modelPanelName, label="Tetris playground", cam=self.cameraName)
+
+        cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
+                         wireframeOnShaded=True, shadows=True, headsUpDisplay=False)
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.ssaoEnable\" 1;" \
@@ -537,10 +544,9 @@ class TetrisDialog(QtWidgets.QDialog):
 
         # Find a pointer to the modelPanel that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(self.modelPanelName)
-        
+
         # Wrap the pointer into a python QObject
         self.modelPanel = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
-        self.modelPanel.repaint()
 
         # add our QObject reference to the paneLayout to our layout
         self.verticalLayout.addWidget(self.paneLayout)
@@ -949,9 +955,9 @@ class TetrisDialog(QtWidgets.QDialog):
             test_break_counter += 1
             cmds.refresh()
             time.sleep(0.1)
+            # WE NEED CONDITION, WHICH WILL APPEAR WHEN PLAYER WILL FAIL
 
     def show(self):
-
         super(TetrisDialog, self).show()
         self.setup_tetris()
 
@@ -997,14 +1003,6 @@ class TetrisDialog(QtWidgets.QDialog):
 
         # setup camera params
         mfn_cam_obj.setFocalLength(154)
-        cam_transformation_matrix = [[0.9477684100095842, 0.0, -0.3189593092980744, 0.0],
-                                    [-0.08437068513613653, 0.9643805706617643, -0.2507024180572432, 0.0],
-                                    [0.3075981607187592, 0.26451864760369886, 0.9140094401002359, 0.0],
-                                    [48.080564005866556, 51.558463195211445, 144.48540158432039, 1.0]]
-        cam_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(cam_transformation_matrix)
-        cam_mtransformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
-        mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
-        mfn_transform.set(cam_mtransformation_matrix)
 
         # get mdag path from camera shape
         mdag_node = OpenMaya.MFnDagNode(transform_cam_mobj)
@@ -1020,6 +1018,13 @@ class TetrisDialog(QtWidgets.QDialog):
         cam_name = mdag_node.fullPathName()
         cmds.select(cam_name)
         cmds.viewFit()
+
+        cam_transformation_matrix = [[0.974370064785234, -1.734723475976807e-18, -0.22495105434387022, 0.0], [-0.027174389963974324, 0.9926767021559224, -0.11770521452734141, 0.0], [0.22330367077257082, 0.12080134517811304, 0.9672344625904589, 0.0], [18.902075772515936, 18.976222815997183, 73.13078115900157, 1.0]]
+        cam_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(cam_transformation_matrix)
+        cam_mtransformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
+        mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
+        mfn_transform.set(cam_mtransformation_matrix)
+
 
     def create_shader(self, name, node_type="lambert"):
         material = cmds.shadingNode(node_type, name=name, asShader=True)
