@@ -521,6 +521,9 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.setParent(layout)
 
         paneLayoutName = cmds.paneLayout()
+        for model_panel in cmds.getPanel(type="modelPanel"):
+            if cmds.modelEditor(model_panel, q=1, av=1):
+                cmds.modelEditor(model_panel, e=1, allObjects=False)
 
         # Find a pointer to the paneLayout that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(paneLayoutName)
@@ -1024,7 +1027,6 @@ class TetrisDialog(QtWidgets.QDialog):
         cam_mtransformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
         mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
         mfn_transform.set(cam_mtransformation_matrix)
-
 
     def create_shader(self, name, node_type="lambert"):
         material = cmds.shadingNode(node_type, name=name, asShader=True)
