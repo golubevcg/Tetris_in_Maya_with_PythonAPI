@@ -499,12 +499,13 @@ class TetrisDialog(QtWidgets.QDialog):
         # on escape delete all created nodes, enable viewport and exit application
         # on destructor do the same cleaning process
         # if e.
-        self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict,self.go_next_figure)
+        if self.active_figure_name:
+            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict,self.go_next_figure)
         cmds.refresh()
 
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
-
+        self.active_figure_name = None
         self.setObjectName("MyWindow")
         self.resize(600, 800)
         self.setWindowTitle("PyQt ModelPanel Test")
@@ -1030,7 +1031,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def create_shader(self, name, node_type="lambert"):
         material = cmds.shadingNode(node_type, name=name, asShader=True)
-        sg = cmds.sets(name="%sSG" % name, empty=True, renderable=True, noSurfaceShader=True)
+        sg = cmds.sets(name="%sSG"%name, empty=True, renderable=True, noSurfaceShader=True)
         cmds.connectAttr("%s.outColor" % material, "%s.surfaceShader" % sg)
         return material, sg
 
