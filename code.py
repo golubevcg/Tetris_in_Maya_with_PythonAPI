@@ -950,6 +950,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
         self.go_next_figure = True
         while test_break_counter < 100:
+            QApplication.processEvents()
             if self.go_next_figure:
                 self.active_figure_name = self.generate_random_figure()
             self.go_next_figure = False
@@ -958,6 +959,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
             test_break_counter += 1
             cmds.refresh()
+            QApplication.processEvents()
             time.sleep(0.1)
             # WE NEED CONDITION, WHICH WILL APPEAR WHEN PLAYER WILL FAIL
 
