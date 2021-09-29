@@ -495,13 +495,35 @@ class Field:
 class TetrisDialog(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
+
+
+        if e.key() == Qt.Key_Escape:
+            self.finish_game = True
+
+        if e.key() == Qt.Key_Enter:
+            pass
+
+
+        
+        if not self.active_figure_name:
+            return
+        
+        if e.key() == Qt.Key_Left:
+            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict, self.go_next_figure, transform_value=-1)
+        elif e.key() == Qt.Key_Right:
+            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict, self.go_next_figure, transform_value=1)
+        elif e.key() == Qt.Key_Up:
+            self.move_figure(self.active_figure_name, "rotateZ", self.locked_cells_dict, self.go_next_figure, transform_value=90)
+        elif e.key() == Qt.Key_Down:
+            self.move_figure(self.active_figure_name, "rotateZ", self.locked_cells_dict, self.go_next_figure, transform_value=-90)
+        elif e.key() == Qt.Key_Space:
+            pass
+
         print "Hahahahhahaha"
         # on escape delete all created nodes, enable viewport and exit application
         # on destructor do the same cleaning process
         # if e.
-        if self.active_figure_name:
-            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict,self.go_next_figure)
-        cmds.refresh()
+        
 
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
@@ -949,6 +971,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.locked_cells_dict = dict()
 
         self.go_next_figure = True
+        self.finish_game = False
         while test_break_counter < 100:
             QApplication.processEvents()
             if self.go_next_figure:
@@ -961,6 +984,8 @@ class TetrisDialog(QtWidgets.QDialog):
             cmds.refresh()
             QApplication.processEvents()
             time.sleep(0.1)
+            if self.finish_game:
+                break
             # WE NEED CONDITION, WHICH WILL APPEAR WHEN PLAYER WILL FAIL
 
     def show(self):
@@ -1189,6 +1214,8 @@ class TetrisDialog(QtWidgets.QDialog):
 
         self.update_locked_cells_list(figure_name, locked_cells_dict,
                                  cleanup_previous_locked_cells=stored_centroids_before_translate)
+
+        cmds.refresh()
 
         return go_next_figure
 
