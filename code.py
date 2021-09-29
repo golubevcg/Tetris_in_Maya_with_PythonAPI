@@ -546,13 +546,15 @@ class TetrisDialog(QtWidgets.QDialog):
         # Find a pointer to the paneLayout that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(paneLayoutName)
 
+
         # Wrap the pointer into a python QObject
-        self.paneLayout = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+        self.paneLayout_widget = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+
 
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
-        self.modelPanelName = "customModelPanel"
+        self.modelPanelName = "customModelPanel114141222111112311331"
         self.modelPanelName = cmds.modelPanel(self.modelPanelName, label="Tetris playground", cam=self.cameraName)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
@@ -569,8 +571,13 @@ class TetrisDialog(QtWidgets.QDialog):
         # Wrap the pointer into a python QObject
         self.modelPanel = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
+        superbutton = QPushButton("superbutton", self.modelPanel)
+        superbutton.move(500, 400)
+
         # add our QObject reference to the paneLayout to our layout
-        self.verticalLayout.addWidget(self.paneLayout)
+        self.verticalLayout.addWidget(self.paneLayout_widget)
+
+
 
     def setup_tetris(self):
         field_obj = Field()
@@ -985,7 +992,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def show(self):
         super(TetrisDialog, self).show()
-        self.setup_tetris()
+        # self.setup_tetris()
 
     def showEvent(self, event):
         super(TetrisDialog, self).showEvent(event)
