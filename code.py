@@ -495,31 +495,26 @@ class Field:
 class TetrisDialog(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
-
-
         if e.key() == Qt.Key_Escape:
             self.finish_game = True
 
         if e.key() == Qt.Key_Enter:
             pass
 
-
-        
         if not self.active_figure_name:
             return
         
         if e.key() == Qt.Key_Left:
-            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict, self.go_next_figure, transform_value=-1)
+            self.move_figure("translateX", transform_value=-1)
         elif e.key() == Qt.Key_Right:
-            self.move_figure(self.active_figure_name, "translateX", self.locked_cells_dict, self.go_next_figure, transform_value=1)
+            self.move_figure("translateX", transform_value=1)
         elif e.key() == Qt.Key_Up:
-            self.move_figure(self.active_figure_name, "rotateZ", self.locked_cells_dict, self.go_next_figure, transform_value=90)
+            self.move_figure("rotateZ", transform_value=90)
         elif e.key() == Qt.Key_Down:
-            self.move_figure(self.active_figure_name, "rotateZ", self.locked_cells_dict, self.go_next_figure, transform_value=-90)
+            self.move_figure("rotateZ", transform_value=-90)
         elif e.key() == Qt.Key_Space:
-            pass
+            self.move_figure_to_the_bottom()
 
-        print "Hahahahhahaha"
         # on escape delete all created nodes, enable viewport and exit application
         # on destructor do the same cleaning process
         # if e.
@@ -978,7 +973,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.active_figure_name = self.generate_random_figure()
             self.go_next_figure = False
 
-            self.go_next_figure = self.move_figure(self.active_figure_name, "translateY", self.locked_cells_dict, self.go_next_figure)
+            self.move_figure("translateY")
 
             test_break_counter += 1
             cmds.refresh()
@@ -1194,30 +1189,31 @@ class TetrisDialog(QtWidgets.QDialog):
 
         return maya_qtwidget_main_window
 
-    def move_figure(self, figure_name, direction, locked_cells_dict, go_next_figure, transform_value=-1.0):
-
+    def move_figure(self, direction, transform_value=-1.0, return_collided=False):
         current_figure_translate_y_attr_name = "%s.%s" % (self.active_figure_name, direction)
-        changed_position = cmds.getAttr(current_figure_translate_y_attr_name)
-        # сдвинуть в нужном направлении
-        # проверить что сдвиг возможен
-        # если нет - то вернуть фигуру назад
-        # обновить вьюпорт
+        current_position = cmds.getAttr(current_figure_translate_y_attr_name)
 
         stored_centroids_before_translate = dict()
-        self.get_all_child_shapes_xy_centroids_list(figure_name, stored_centroids_before_translate)
-        cmds.setAttr(current_figure_translate_y_attr_name, changed_position + transform_value)
+        self.get_all_child_shapes_xy_centroids_list(self.active_figure_name, stored_centroids_before_translate)
+        cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
-        transform_update_allowed = self.check_mesh_update_allowed(figure_name, locked_cells_dict)
+        transform_update_allowed = self.check_mesh_update_allowed(self.active_figure_name, self.locked_cells_dict)
         if not transform_update_allowed:
-            cmds.setAttr(current_figure_translate_y_attr_name, changed_position)
-            go_next_figure = True
+            cmds.setAttr(current_figure_translate_y_attr_name, current_position)
+            self.go_next_figure = True
+            return_collided = True
 
-        self.update_locked_cells_list(figure_name, locked_cells_dict,
+        self.update_locked_cells_list(self.active_figure_name, self.locked_cells_dict,
                                  cleanup_previous_locked_cells=stored_centroids_before_translate)
-
         cmds.refresh()
+        return return_collided
 
-        return go_next_figure
+    def move_figure_to_the_bottom(self):
+        recursion_brake = 0
+        while recursion_brake < 50:
+            if self.move_figure("translateY"):
+                break
+            recursion_brake += 1
 
 
 def launch_window():
