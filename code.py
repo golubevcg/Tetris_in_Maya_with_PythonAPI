@@ -525,6 +525,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.active_figure_name = None
         self.setObjectName("MyWindow")
         self.resize(600, 800)
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.MSWindowsFixedSizeDialogHint)
         self.setWindowTitle("PyQt ModelPanel Test")
 
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
@@ -554,7 +555,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
-        self.modelPanelName = "customModelPanel114141222111112311331"
+        self.modelPanelName = "customModelPanel"
         self.modelPanelName = cmds.modelPanel(self.modelPanelName, label="Tetris playground", cam=self.cameraName)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
