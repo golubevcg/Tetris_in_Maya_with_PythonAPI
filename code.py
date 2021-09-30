@@ -24,6 +24,7 @@ import shiboken2
 import maya.cmds as cmds
 import maya.mel as mel
 import maya.OpenMayaUI as OpenMayaUI
+import uuid
 
 
 class OpenMayaUtils:
@@ -519,7 +520,6 @@ class TetrisDialog(QtWidgets.QDialog):
         # on destructor do the same cleaning process
         # if e.
         
-
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
         self.active_figure_name = None
@@ -547,7 +547,6 @@ class TetrisDialog(QtWidgets.QDialog):
         # Find a pointer to the paneLayout that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(paneLayoutName)
 
-
         # Wrap the pointer into a python QObject
         self.paneLayout_widget = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
@@ -555,11 +554,11 @@ class TetrisDialog(QtWidgets.QDialog):
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
-        self.modelPanelName = "customModelPanel"
-        self.modelPanelName = cmds.modelPanel(self.modelPanelName, label="Tetris playground", cam=self.cameraName)
+        uuid_test = uuid.uuid4()
+        self.modelPanelName = cmds.modelPanel("customModelPanel_%s"%(str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
-                         wireframeOnShaded=True, shadows=True, headsUpDisplay=False)
+                         cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False)
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.ssaoEnable\" 1;" \
@@ -572,13 +571,34 @@ class TetrisDialog(QtWidgets.QDialog):
         # Wrap the pointer into a python QObject
         self.modelPanel = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
-        superbutton = QPushButton("superbutton", self.modelPanel)
-        superbutton.move(500, 400)
+        # self.left_arrow_button = QPushButton("Left Arrow", self.modelPanel)
+        # self.left_arrow_button.setFixedHeight(25)
+        # self.left_arrow_button.setFixedWidth(60)
+        # self.left_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        # self.left_arrow_button.move(430, 400)
+
+        # self.right_arrow_button = QPushButton("Right Arrow", self.modelPanel)
+        # self.right_arrow_button.setFixedHeight(25)
+        # self.right_arrow_button.setFixedWidth(70)
+        # self.right_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        # self.right_arrow_button.move(520, 400)
+
+        # self.top_arrow_button = QPushButton("Up Arrow", self.modelPanel)
+        # self.top_arrow_button.setFlat(True)
+        # self.top_arrow_button.setFixedHeight(25)
+        # self.top_arrow_button.setFixedWidth(70)
+        # self.top_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        # self.top_arrow_button.move(500, 400)
+
+        # self.down_arrow_button = QPushButton("Down Arrow", self.modelPanel)
+        # self.down_arrow_button.setFlat(True)
+        # self.down_arrow_button.setFixedHeight(25)
+        # self.down_arrow_button.setFixedWidth(70)
+        # self.down_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        # self.down_arrow_button.move(500, 400)
 
         # add our QObject reference to the paneLayout to our layout
         self.verticalLayout.addWidget(self.paneLayout_widget)
-
-
 
     def setup_tetris(self):
         field_obj = Field()
@@ -989,17 +1009,10 @@ class TetrisDialog(QtWidgets.QDialog):
             time.sleep(0.1)
             if self.finish_game:
                 break
-            # WE NEED CONDITION, WHICH WILL APPEAR WHEN PLAYER WILL FAIL
-
+        # WE NEED CONDITION, WHICH WILL APPEAR WHEN PLAYER WILL FAIL
+    
     def show(self):
         super(TetrisDialog, self).show()
-        # self.setup_tetris()
-
-    def showEvent(self, event):
-        super(TetrisDialog, self).showEvent(event)
-
-        # maya can lag in how it repaints UI. Force it to repaint
-        # when we show the window.
         self.modelPanel.repaint()
 
     def setup_viewport_lights(self):
@@ -1232,30 +1245,10 @@ def launch_window():
     maya_window_wrapped = shiboken2.wrapInstance(long(maya_main_window), QtWidgets.QWidget)
     d = TetrisDialog(maya_window_wrapped)
     d.show()
+    d.setup_tetris()
 
     return d
 
-
 #disable main viewport
-# mel.eval("paneLayout -e -manage false $gMainPane")
+mel.eval("paneLayout -e -manage false $gMainPane")
 launch_window()
-
-
-
-#FASTER UPDATE x30 per second
-#LOCK MIN Y VALUE, LOCK MAX AND MIN X VALUE
-
-#each shape with no parent later parent
-# if main parent bbox intersects then check other shapes intersection
-#for each shape check boundbox intersects with other shapes and bg field
-
-# start cycle with falling figures each iteration
-# figure out moment of collision with other figures
-# generate other figures on collision moment
-# setup viewport ui and hotkeys
-# blast all cubes, which is filled full line of box
-# finish game, when after collision y coord of figure is higher than highest y position from box (with number for example)
-
-
-# COLLISION CHECKING -> GET CURRENT FIGURE POSITION, TAKE LOWEST POINT, CHECK THAT IN
-# RADIUS OF THAT POINT THERE IS NO GEOMETRY, IF IT IS -> THEN STOP
