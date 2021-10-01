@@ -555,9 +555,6 @@ class TetrisDialog(QtWidgets.QDialog):
         # Wrap the pointer into a python QObject
         self.paneLayout_widget = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
-        #keyPressEvent(
-        #keyReleaseEvent
-
         self.enter_button = QPushButton("Enter", self.paneLayout_widget)
         self.enter_button.setFixedHeight(70)
         self.enter_button.setFixedWidth(70)
@@ -591,7 +588,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.up_button.move(470, 350)
 
         self.space_button = QPushButton("Space", self.paneLayout_widget)
-        self.space_button.setFixedHeight(45)
+        self.space_button.setFixedHeight(35)
         self.space_button.setFixedWidth(145)
         self.space_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
         self.space_button.move(420, 480)
@@ -602,10 +599,6 @@ class TetrisDialog(QtWidgets.QDialog):
         self.esc_button.setFixedWidth(45)
         self.esc_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
         self.esc_button.move(420, 610)
-
-
-
-
 
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
