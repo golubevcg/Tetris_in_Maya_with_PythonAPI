@@ -498,9 +498,10 @@ class TetrisDialog(QtWidgets.QDialog):
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
             self.finish_game = True
+        elif e.key() == Qt.Key_Enter:
+            print "enter pressed!"
+            self.enter_button.setStyleSheet("background-color: red;")
 
-        if e.key() == Qt.Key_Enter:
-            pass
 
         if not self.active_figure_name:
             return
@@ -515,11 +516,15 @@ class TetrisDialog(QtWidgets.QDialog):
             self.move_figure("rotateZ", transform_value=-90)
         elif e.key() == Qt.Key_Space:
             self.move_figure_to_the_bottom()
-
         # on escape delete all created nodes, enable viewport and exit application
         # on destructor do the same cleaning process
         # if e.
         
+    def keyReleaseEvent(self, e):
+        if e.key() == Qt.Key_Enter:
+            print "enter released!"
+            self.enter_button.setStyleSheet("background-color: #444444;")
+
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
         self.active_figure_name = None
@@ -550,6 +555,57 @@ class TetrisDialog(QtWidgets.QDialog):
         # Wrap the pointer into a python QObject
         self.paneLayout_widget = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
 
+        #keyPressEvent(
+        #keyReleaseEvent
+
+        self.enter_button = QPushButton("Enter", self.paneLayout_widget)
+        self.enter_button.setFixedHeight(70)
+        self.enter_button.setFixedWidth(70)
+        self.enter_button.move(420, 200)
+        self.enter_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+
+        self.left_button = QPushButton("Left", self.paneLayout_widget)
+        self.left_button.setFixedHeight(45)
+        self.left_button.setFixedWidth(45)
+        self.left_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.left_button.move(420, 400)
+
+        self.down_button = QPushButton("Down", self.paneLayout_widget)
+        self.down_button.setFlat(True)
+        self.down_button.setFixedHeight(45)
+        self.down_button.setFixedWidth(45)
+        self.down_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.down_button.move(470, 400)
+
+        self.right_button = QPushButton("Right", self.paneLayout_widget)
+        self.right_button.setFixedHeight(45)
+        self.right_button.setFixedWidth(45)
+        self.right_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.right_button.move(520, 400)
+
+        self.up_button = QPushButton("Up", self.paneLayout_widget)
+        self.up_button.setFlat(True)
+        self.up_button.setFixedHeight(45)
+        self.up_button.setFixedWidth(45)
+        self.up_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.up_button.move(470, 350)
+
+        self.space_button = QPushButton("Space", self.paneLayout_widget)
+        self.space_button.setFixedHeight(45)
+        self.space_button.setFixedWidth(145)
+        self.space_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.space_button.move(420, 480)
+
+        self.esc_button = QPushButton("Esc", self.paneLayout_widget)
+        self.esc_button.setFlat(True)
+        self.esc_button.setFixedHeight(45)
+        self.esc_button.setFixedWidth(45)
+        self.esc_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
+        self.esc_button.move(420, 610)
+
+
+
+
 
         self.camera_transform_name = cmds.camera()[0]
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
@@ -569,33 +625,7 @@ class TetrisDialog(QtWidgets.QDialog):
         ptr = OpenMayaUI.MQtUtil.findControl(self.modelPanelName)
 
         # Wrap the pointer into a python QObject
-        self.modelPanel = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
-
-        # self.left_arrow_button = QPushButton("Left Arrow", self.modelPanel)
-        # self.left_arrow_button.setFixedHeight(25)
-        # self.left_arrow_button.setFixedWidth(60)
-        # self.left_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
-        # self.left_arrow_button.move(430, 400)
-
-        # self.right_arrow_button = QPushButton("Right Arrow", self.modelPanel)
-        # self.right_arrow_button.setFixedHeight(25)
-        # self.right_arrow_button.setFixedWidth(70)
-        # self.right_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
-        # self.right_arrow_button.move(520, 400)
-
-        # self.top_arrow_button = QPushButton("Up Arrow", self.modelPanel)
-        # self.top_arrow_button.setFlat(True)
-        # self.top_arrow_button.setFixedHeight(25)
-        # self.top_arrow_button.setFixedWidth(70)
-        # self.top_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
-        # self.top_arrow_button.move(500, 400)
-
-        # self.down_arrow_button = QPushButton("Down Arrow", self.modelPanel)
-        # self.down_arrow_button.setFlat(True)
-        # self.down_arrow_button.setFixedHeight(25)
-        # self.down_arrow_button.setFixedWidth(70)
-        # self.down_arrow_button.setStyleSheet("QPushButton {background-color: #444444; border: 0px; color:white;}")
-        # self.down_arrow_button.move(500, 400)
+        self.modelPanel = shiboken2.wrapInstance(int(ptr), QtWidgets.QWidget)
 
         # add our QObject reference to the paneLayout to our layout
         self.verticalLayout.addWidget(self.paneLayout_widget)
@@ -989,13 +1019,14 @@ class TetrisDialog(QtWidgets.QDialog):
 
         self.min_y = 0
         self.max_y = 24
-        self.min_x = -4
-        self.max_x = 4
+        self.min_x = -5
+        self.max_x = 5
         self.locked_cells_dict = dict()
 
         self.go_next_figure = True
         self.finish_game = False
         while test_break_counter < 100:
+            cmds.refresh()
             QApplication.processEvents()
             if self.go_next_figure:
                 self.active_figure_name = self.generate_random_figure()
@@ -1004,8 +1035,7 @@ class TetrisDialog(QtWidgets.QDialog):
             self.move_figure("translateY")
 
             test_break_counter += 1
-            cmds.refresh()
-            QApplication.processEvents()
+            self.modelPanel.repaint()
             time.sleep(0.1)
             if self.finish_game:
                 break
@@ -1013,7 +1043,7 @@ class TetrisDialog(QtWidgets.QDialog):
     
     def show(self):
         super(TetrisDialog, self).show()
-        self.modelPanel.repaint()
+        self.setup_tetris()
 
     def setup_viewport_lights(self):
         global mfn_transform
@@ -1184,12 +1214,16 @@ class TetrisDialog(QtWidgets.QDialog):
         for child in child_shapes:
             child_cords = self.get_shape_xy_centroid(child)
 
-            if not self.min_x < child_cords[0] < self.max_x or not self.min_y < child_cords[1] < self.max_y:
-                return False
-            elif tuple(child_cords) in locked_cells_dict.keys() and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
-                return False
+            if tuple(child_cords) in locked_cells_dict.keys() and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
+                return False, False
+            
+            if not self.min_y < child_cords[1] < self.max_y:
+                return False, False
 
-        return True
+            if not self.min_x < child_cords[0] < self.max_x:
+                return False, True
+
+        return True, False
 
     def update_locked_cells_list(self, mesh_name, locked_cells_dict, cleanup_previous_locked_cells=None):
         if cleanup_previous_locked_cells:
@@ -1210,7 +1244,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
         return maya_qtwidget_main_window
 
-    def move_figure(self, direction, transform_value=-1.0, return_collided=False):
+    def move_figure(self, direction, transform_value=-1.0, return_y_collided=False):
         current_figure_translate_y_attr_name = "%s.%s" % (self.active_figure_name, direction)
         current_position = cmds.getAttr(current_figure_translate_y_attr_name)
 
@@ -1218,16 +1252,17 @@ class TetrisDialog(QtWidgets.QDialog):
         self.get_all_child_shapes_xy_centroids_list(self.active_figure_name, stored_centroids_before_translate)
         cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
-        transform_update_allowed = self.check_mesh_update_allowed(self.active_figure_name, self.locked_cells_dict)
+        transform_update_allowed, x_axis_collision = self.check_mesh_update_allowed(self.active_figure_name, self.locked_cells_dict)
         if not transform_update_allowed:
             cmds.setAttr(current_figure_translate_y_attr_name, current_position)
-            self.go_next_figure = True
-            return_collided = True
+            if not x_axis_collision:
+                self.go_next_figure = True
+                return_y_collided = True
 
         self.update_locked_cells_list(self.active_figure_name, self.locked_cells_dict,
                                  cleanup_previous_locked_cells=stored_centroids_before_translate)
         cmds.refresh()
-        return return_collided
+        return return_y_collided
 
     def move_figure_to_the_bottom(self):
         recursion_brake = 0
@@ -1245,7 +1280,6 @@ def launch_window():
     maya_window_wrapped = shiboken2.wrapInstance(long(maya_main_window), QtWidgets.QWidget)
     d = TetrisDialog(maya_window_wrapped)
     d.show()
-    d.setup_tetris()
 
     return d
 
