@@ -596,6 +596,8 @@ class TetrisDialog(QtWidgets.QDialog):
                    "setAttr \"hardwareRenderingGlobals.ssaoRadius\" 10;"
         mel.eval(commands)
 
+        #TODO: remove additional UI at the top of viewport
+
         # Find a pointer to the modelPanel that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(self.modelPanelName)
 
