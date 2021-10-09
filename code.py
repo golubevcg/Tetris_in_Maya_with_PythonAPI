@@ -497,24 +497,32 @@ class Field:
 
 class TetrisDialog(QtWidgets.QDialog):
 
+    def closeEvent(self, e):
+        print "CLOSE EVENT!"
+        self.is_game_paused = True
+        self.close_game()
+        super(TetrisDialog, self).closeEvent(e)
+
     def keyPressEvent(self, e):
         if e.key() == 16777216:
             if self.is_game_paused:
                 self.close_game()
             else:
                 self.is_game_paused = True
-                # TODO: create label with Pause text upper buttons
-
+                self.pause_label.setVisible(True)
+                self.press_enter_to_start.setVisible(True)
         elif e.key() == 16777220:
             self.enter_button.setStyleSheet("background-color: #51c2b8;")
-
             if not self.game_played_currently:
                 self.start_game()
-
-        if not self.active_figure_name:
+            elif self.is_game_paused:
+                self.is_game_paused = False
+                self.pause_label.setVisible(False)
+                self.press_enter_to_start.setVisible(False)
+                self.continue_game()
+        elif not self.active_figure_name:
             return
-        
-        if e.key() == 16777234:
+        elif e.key() == 16777234:
             self.left_button.setStyleSheet("background-color: #51c2b8;")
             self.move_figure("translateX", transform_value=-1)
         elif e.key() == 16777236:
@@ -531,15 +539,11 @@ class TetrisDialog(QtWidgets.QDialog):
             self.move_figure_to_the_bottom()
 
     def keyReleaseEvent(self, e):
-        if e.key() == 16777216:
-            self.is_game_paused = True
-        elif e.key() == 16777220:
+        if e.key() == 16777220:
             self.enter_button.setStyleSheet("background-color: #444444;")
-
-        if not self.active_figure_name:
+        elif not self.active_figure_name:
             return
-
-        if e.key() == 16777234:
+        elif e.key() == 16777234:
             self.left_button.setStyleSheet("background-color: #444444;")
         elif e.key() == 16777236:
             self.right_button.setStyleSheet("background-color: #444444;")
@@ -586,12 +590,13 @@ class TetrisDialog(QtWidgets.QDialog):
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
         uuid_test = uuid.uuid4()
-        self.modelPanelName = cmds.modelPanel("customModelPanel_%s"%(str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
+        self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
                          cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=0)
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
+                   "setAttr \"hardwareRenderingGlobals.multiSampleCount\" 16;" \
                    "setAttr \"hardwareRenderingGlobals.ssaoEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.ssaoRadius\" 10;"
         mel.eval(commands)
@@ -608,6 +613,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.verticalLayout.addWidget(self.paneLayout_widget)
 
         self.game_played_currently = False
+        self.is_game_paused = False
         self.pre_setup_tetris()
 
     def setup_ui_buttons_and_labels(self):
@@ -618,12 +624,25 @@ class TetrisDialog(QtWidgets.QDialog):
         points_label.move(410, 70)
         points_label.setWordWrap(True)
 
+        self.pause_label = QLabel("Game paused", self.paneLayout_widget)
+        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;")
+        self.pause_label.setFixedHeight(50)
+        self.pause_label.setFixedWidth(200)
+        self.pause_label.move(397, 300)
+        self.pause_label.setVisible(False)
+
+        self.press_enter_to_start = QLabel("press Enter to continue", self.paneLayout_widget)
+        self.press_enter_to_start.setFixedHeight(50)
+        self.press_enter_to_start.setFixedWidth(250)
+        self.press_enter_to_start.move(435, 325)
+        self.press_enter_to_start.setVisible(False)
+
+        qpush_button_standart_stylesheet = "QPushButton {background-color: #444444;  border: 2px; border-color:#51c2b8; border-radius:4px; color:white;}"
         self.enter_button = QPushButton("Enter", self.paneLayout_widget)
         self.enter_button.setFixedHeight(45)
         self.enter_button.setFixedWidth(45)
         self.enter_button.move(520, 130)
-        self.enter_button.setStyleSheet(
-            "QPushButton {background-color: #444444;  border: 2px; border-color: #20f7e5; border-radius:4px; color:white;}")
+        self.enter_button.setStyleSheet(qpush_button_standart_stylesheet)
 
         enter_label = QLabel("Press Enter to start the game", self.paneLayout_widget)
         enter_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -636,10 +655,9 @@ class TetrisDialog(QtWidgets.QDialog):
         self.escape_button.setFixedHeight(45)
         self.escape_button.setFixedWidth(45)
         self.escape_button.move(520, 180)
-        self.escape_button.setStyleSheet(
-            "QPushButton {background-color: #444444;  border: 2px; border-color: #20f7e5; border-radius:4px; color:white;}")
+        self.escape_button.setStyleSheet(qpush_button_standart_stylesheet)
 
-        esc_label = QLabel("Esc to pause or unpause the game", self.paneLayout_widget)
+        esc_label = QLabel("Esc to pause the game", self.paneLayout_widget)
         esc_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         esc_label.setFixedHeight(200)
         esc_label.setFixedWidth(100)
@@ -663,8 +681,7 @@ class TetrisDialog(QtWidgets.QDialog):
         left_right_help_label.setFixedWidth(150)
         left_right_help_label.move(420, 680)
         left_right_help_label.setWordWrap(True)
-        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided",
-                                  self.paneLayout_widget)
+        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self.paneLayout_widget)
         space_help_label.setFixedHeight(50)
         space_help_label.setFixedWidth(150)
         space_help_label.move(420, 720)
@@ -673,37 +690,37 @@ class TetrisDialog(QtWidgets.QDialog):
         self.left_button = QPushButton("Left", self.paneLayout_widget)
         self.left_button.setFixedHeight(45)
         self.left_button.setFixedWidth(45)
-        self.left_button.setStyleSheet(
-            "QPushButton {background-color: #444444; border: 2px; border-radius:4px; border-color: #20f7e5; color:white;}")
+        self.left_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.left_button.move(420, 550)
 
         self.down_button = QPushButton("Down", self.paneLayout_widget)
         self.down_button.setFlat(True)
         self.down_button.setFixedHeight(45)
         self.down_button.setFixedWidth(45)
-        self.down_button.setStyleSheet("QPushButton {background-color: #444444; border-radius:4px; border: 0px; color:white;}")
+        self.down_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.down_button.move(470, 550)
 
         self.right_button = QPushButton("Right", self.paneLayout_widget)
         self.right_button.setFixedHeight(45)
         self.right_button.setFixedWidth(45)
-        self.right_button.setStyleSheet("QPushButton {background-color: #444444; border-radius:4px; border: 0px; color:white;}")
+        self.right_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.right_button.move(520, 550)
 
         self.up_button = QPushButton("Up", self.paneLayout_widget)
         self.up_button.setFlat(True)
         self.up_button.setFixedHeight(45)
         self.up_button.setFixedWidth(45)
-        self.up_button.setStyleSheet("QPushButton {background-color: #444444; border-radius:4px; border: 0px; color:white;}")
+        self.up_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.up_button.move(470, 500)
 
         self.space_button = QPushButton("Space", self.paneLayout_widget)
         self.space_button.setFixedHeight(35)
         self.space_button.setFixedWidth(145)
-        self.space_button.setStyleSheet("QPushButton {background-color: #444444; border-radius:4px; border: 0px; color:white;}")
+        self.space_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.space_button.move(420, 600)
 
     def close_game(self):
+        print("Closing game!")
         # remove all created nodes
         # reapply viewport settings to default or to stored before changing
         pass
@@ -724,373 +741,373 @@ class TetrisDialog(QtWidgets.QDialog):
     def start_game(self):
         self.game_played_currently = True
         self.figures_mesh_creation_data = {'figure_0_mesh_data': {'center_shape_data': [
-            {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-             'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
-             'vertex_positions': [[-0.030395925045013428, 19.998565673828125, 1.0007339715957642, 1.0],
-                                  [0.9696040749549866, 19.998565673828125, 1.0007339715957642, 1.0],
-                                  [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
-                                  [0.9696040749549866, 20.998565673828125, 1.0007339715957642, 1.0],
-                                  [-0.030395925045013428, 19.998565673828125, 2.0007338523864746, 1.0],
-                                  [0.9696040749549866, 19.998565673828125, 2.0007338523864746, 1.0],
-                                  [0.9696040749549866, 20.998565673828125, 2.0007338523864746, 1.0],
-                                  [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0]],
-             'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                    [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
-                    [0.9696040749549866, 20.998565673828125, 1.0007339715957642, 1.0],
-                    [-0.030395925045013428, 21.998565673828125, 1.0007339715957642, 1.0],
-                    [0.9696040749549866, 21.998565673828125, 1.0007339715957642, 1.0],
-                    [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
-                    [0.9696040749549866, 20.998565673828125, 2.0007338523864746, 1.0],
-                    [0.9696040749549866, 21.998565673828125, 2.0007338523864746, 1.0],
-                    [-0.030395925045013428, 21.998565673828125, 2.0007338523864746, 1.0]], 'numPolygons': 6},
-            {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-             'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
-             'vertex_positions': [[-1.0303959846496582, 19.998565673828125, 1.0007339715957642, 1.0],
-                                  [-0.030395925045013428, 19.998565673828125, 1.0007339715957642, 1.0],
-                                  [-1.0303959846496582, 20.998565673828125, 1.0007339715957642, 1.0],
-                                  [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
-                                  [-1.0303959846496582, 19.998565673828125, 2.0007338523864746, 1.0],
-                                  [-0.030395925045013428, 19.998565673828125, 2.0007338523864746, 1.0],
-                                  [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
-                                  [-1.0303959846496582, 20.998565673828125, 2.0007338523864746, 1.0]],
-             'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                    [-1.0303959846496582, 20.998565673828125, 1.0007339715957642, 1.0],
-                    [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
-                    [-1.0303959846496582, 21.998565673828125, 1.0007339715957642, 1.0],
-                    [-0.030395925045013428, 21.998565673828125, 1.0007339715957642, 1.0],
-                    [-1.0303959846496582, 20.998565673828125, 2.0007338523864746, 1.0],
-                    [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
-                    [-0.030395925045013428, 21.998565673828125, 2.0007338523864746, 1.0],
-                    [-1.0303959846496582, 21.998565673828125, 2.0007338523864746, 1.0]], 'numPolygons': 6}],
-            'rest_shape_data': None}, 'figure_5_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
-                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                    [0.9697561264038086, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 22.005300521850586, 0.9831539392471313, 1.0],
-                                                    [0.9697561264038086, 22.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 21.005300521850586, 1.9831539392471313, 1.0],
-                                                    [0.9697561264038086, 21.005300521850586, 1.9831539392471313, 1.0],
-                                                    [0.9697561264038086, 22.005300521850586, 1.983154058456421, 1.0],
-                                                    [-0.030243873596191406, 22.005300521850586, 1.983154058456421, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                            {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                             'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
+                                             'vertex_positions': [[-0.030395925045013428, 19.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [0.9696040749549866, 19.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [0.9696040749549866, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-0.030395925045013428, 19.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [0.9696040749549866, 19.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [0.9696040749549866, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0]],
+                                             'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
                                                                  'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
                                                                                                 6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-1.0302438735961914, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-1.0302438735961914, 22.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 22.005300521850586, 0.9831539392471313, 1.0],
-                                                    [-1.0302438735961914, 21.005300521850586, 1.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 21.005300521850586, 1.9831539392471313, 1.0],
-                                                    [-0.030243873596191406, 22.005300521850586, 1.983154058456421, 1.0],
-                                                    [-1.0302438735961914, 22.005300521850586, 1.983154058456421, 1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                    [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                    [0.9696040749549866, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-0.030395925045013428, 21.998565673828125, 1.0007339715957642, 1.0],
+                                                    [0.9696040749549866, 21.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                    [0.9696040749549866, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                    [0.9696040749549866, 21.998565673828125, 2.0007338523864746, 1.0],
+                                                    [-0.030395925045013428, 21.998565673828125, 2.0007338523864746, 1.0]], 'numPolygons': 6},
+                                            {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                             'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
+                                             'vertex_positions': [[-1.0303959846496582, 19.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-0.030395925045013428, 19.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-1.0303959846496582, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                                  [-1.0303959846496582, 19.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [-0.030395925045013428, 19.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                                  [-1.0303959846496582, 20.998565673828125, 2.0007338523864746, 1.0]],
+                                             'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
                                                                  'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
                                                                                                 6, 2, 0, 4, 7], 'vertex_positions': [
-                                                                    [-0.030243873596191406, 20.005300521850586, 0.9831539392471313, 1.0],
-                                                                    [0.9697561264038086, 20.005300521850586, 0.9831539392471313, 1.0],
-                                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                                    [0.9697561264038086, 21.005300521850586, 0.9831539392471313, 1.0],
-                                                                    [-0.030243873596191406, 20.005300521850586, 1.9831539392471313, 1.0],
-                                                                    [0.9697561264038086, 20.005300521850586, 1.9831539392471313, 1.0],
-                                                                    [0.9697561264038086, 21.005300521850586, 1.983154058456421, 1.0],
-                                                                    [-0.030243873596191406, 21.005300521850586, 1.983154058456421, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
-                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
-                                                                                     'vertex_positions': [
-                                                                                         [-1.0302438735961914, 22.005300521850586, 0.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-0.030243873596191406, 22.005300521850586, 0.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-1.0302438735961914, 23.005300521850586, 0.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-0.030243873596191406, 23.005300521850586, 0.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-1.0302438735961914, 22.005300521850586, 1.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-0.030243873596191406, 22.005300521850586, 1.9831539392471313,
-                                                                                          1.0],
-                                                                                         [-0.030243873596191406, 23.005300521850586, 1.983154058456421,
-                                                                                          1.0],
-                                                                                         [-1.0302438735961914, 23.005300521850586, 1.983154058456421,
-                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_3_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
-                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
-                                                    [-0.031080782413482666, 22.002187728881836, 0.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 22.002187728881836, 0.9874250888824463, 1.0],
-                                                    [-0.031080782413482666, 21.002187728881836, 0.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 21.002187728881836, 0.9874250888824463, 1.0],
-                                                    [-0.031080782413482666, 22.002187728881836, 1.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 22.002187728881836, 1.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 21.002187728881836, 1.9874248504638672, 1.0],
-                                                    [-0.031080782413482666, 21.002187728881836, 1.9874248504638672, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
-                                                    [-0.031080782413482666, 21.002187728881836, 0.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 21.002187728881836, 0.9874250888824463, 1.0],
-                                                    [-0.031080782413482666, 20.002187728881836, 0.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 20.002187728881836, 0.9874250888824463, 1.0],
-                                                    [-0.031080782413482666, 21.002187728881836, 1.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 21.002187728881836, 1.9874250888824463, 1.0],
-                                                    [0.9689192175865173, 20.002187728881836, 1.9874248504638672, 1.0],
-                                                    [-0.031080782413482666, 20.002187728881836, 1.9874248504638672, 1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
-                                                                    [-0.031080782413482666, 23.002187728881836, 0.9874250888824463, 1.0],
-                                                                    [0.9689192175865173, 23.002187728881836, 0.9874250888824463, 1.0],
-                                                                    [-0.031080782413482666, 22.002187728881836, 0.9874250888824463, 1.0],
-                                                                    [0.9689192175865173, 22.002187728881836, 0.9874250888824463, 1.0],
-                                                                    [-0.031080782413482666, 23.002187728881836, 1.9874250888824463, 1.0],
-                                                                    [0.9689192175865173, 23.002187728881836, 1.9874250888824463, 1.0],
-                                                                    [0.9689192175865173, 22.002187728881836, 1.9874248504638672, 1.0],
-                                                                    [-0.031080782413482666, 22.002187728881836, 1.9874248504638672, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
-                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
-                                                                                     'vertex_positions': [
-                                                                                         [-1.031080722808838, 22.002187728881836, 0.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-0.031080782413482666, 22.002187728881836, 0.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-1.031080722808838, 21.002187728881836, 0.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-0.031080782413482666, 21.002187728881836, 0.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-1.031080722808838, 22.002187728881836, 1.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-0.031080782413482666, 22.002187728881836, 1.9874250888824463,
-                                                                                          1.0],
-                                                                                         [-0.031080782413482666, 21.002187728881836, 1.9874248504638672,
-                                                                                          1.0],
-                                                                                         [-1.031080722808838, 21.002187728881836, 1.9874248504638672,
-                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_1_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
-                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-0.03058791160583496, 21.000961303710938, 0.9876478910446167, 1.0],
-                                                    [0.969412088394165, 21.000961303710938, 0.9876478910446167, 1.0],
-                                                    [-0.03058791160583496, 22.000961303710938, 0.9876478910446167, 1.0],
-                                                    [0.969412088394165, 22.000961303710938, 0.9876478910446167, 1.0],
-                                                    [-0.03058791160583496, 21.000961303710938, 1.9876478910446167, 1.0],
-                                                    [0.969412088394165, 21.000961303710938, 1.9876478910446167, 1.0],
-                                                    [0.969412088394165, 22.000961303710938, 1.9876477718353271, 1.0],
-                                                    [-0.03058791160583496, 22.000961303710938, 1.9876477718353271, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-0.030587881803512573, 20.000961303710938, 0.9876478910446167, 1.0],
-                                                    [0.969412088394165, 20.000961303710938, 0.9876478910446167, 1.0],
-                                                    [-0.030587881803512573, 21.000961303710938, 0.9876478910446167, 1.0],
-                                                    [0.969412088394165, 21.000961303710938, 0.9876478910446167, 1.0],
-                                                    [-0.030587881803512573, 20.000961303710938, 1.9876478910446167, 1.0],
-                                                    [0.969412088394165, 20.000961303710938, 1.9876478910446167, 1.0],
-                                                    [0.969412088394165, 21.000961303710938, 1.9876477718353271, 1.0],
-                                                    [-0.030587881803512573, 21.000961303710938, 1.9876477718353271, 1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                                                                    [-0.03058791160583496, 22.000961303710938, 0.9876478910446167, 1.0],
-                                                                    [0.969412088394165, 22.000961303710938, 0.9876478910446167, 1.0],
-                                                                    [-0.03058791160583496, 23.000961303710938, 0.9876478910446167, 1.0],
-                                                                    [0.969412088394165, 23.000961303710938, 0.9876478910446167, 1.0],
-                                                                    [-0.03058791160583496, 22.000961303710938, 1.9876478910446167, 1.0],
-                                                                    [0.969412088394165, 22.000961303710938, 1.9876478910446167, 1.0],
-                                                                    [0.969412088394165, 23.000961303710938, 1.9876477718353271, 1.0],
-                                                                    [-0.03058791160583496, 23.000961303710938, 1.9876477718353271, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
-                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
-                                                                                     'vertex_positions': [
-                                                                                         [-1.030587911605835, 22.000961303710938, 0.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-0.03058791160583496, 22.000961303710938, 0.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-1.030587911605835, 23.000961303710938, 0.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-0.03058791160583496, 23.000961303710938, 0.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-1.030587911605835, 22.000961303710938, 1.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-0.03058791160583496, 22.000961303710938, 1.9876478910446167,
-                                                                                          1.0],
-                                                                                         [-0.03058791160583496, 23.000961303710938, 1.9876477718353271,
-                                                                                          1.0],
-                                                                                         [-1.030587911605835, 23.000961303710938, 1.9876477718353271,
-                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_6_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
-                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-0.032750993967056274, 22.00364875793457, 0.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 22.00364875793457, 0.9784406423568726, 1.0],
-                                                    [-0.032750993967056274, 23.00364875793457, 0.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 23.00364875793457, 0.9784406423568726, 1.0],
-                                                    [-0.032750993967056274, 22.00364875793457, 1.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 22.00364875793457, 1.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 23.00364875793457, 1.978440761566162, 1.0],
-                                                    [-0.032750993967056274, 23.00364875793457, 1.978440761566162, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                                                    [-0.032750993967056274, 20.00364875793457, 0.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 20.00364875793457, 0.9784406423568726, 1.0],
-                                                    [-0.032750993967056274, 21.00364875793457, 0.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 21.00364875793457, 0.9784406423568726, 1.0],
-                                                    [-0.032750993967056274, 20.00364875793457, 1.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 20.00364875793457, 1.9784406423568726, 1.0],
-                                                    [0.9672490358352661, 21.00364875793457, 1.978440761566162, 1.0],
-                                                    [-0.032750993967056274, 21.00364875793457, 1.978440761566162, 1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
-                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
-                                                                    [-0.032750993967056274, 21.00364875793457, 0.9784406423568726, 1.0],
-                                                                    [0.9672490358352661, 21.00364875793457, 0.9784406423568726, 1.0],
-                                                                    [-0.032750993967056274, 22.00364875793457, 0.9784406423568726, 1.0],
-                                                                    [0.9672490358352661, 22.00364875793457, 0.9784406423568726, 1.0],
-                                                                    [-0.032750993967056274, 21.00364875793457, 1.9784406423568726, 1.0],
-                                                                    [0.9672490358352661, 21.00364875793457, 1.9784406423568726, 1.0],
-                                                                    [0.9672490358352661, 22.00364875793457, 1.978440761566162, 1.0],
-                                                                    [-0.032750993967056274, 22.00364875793457, 1.978440761566162, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
-                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
-                                                                                     'vertex_positions': [
-                                                                                         [-0.032750993967056274, 23.00956916809082, 0.9784406423568726,
-                                                                                          1.0],
-                                                                                         [0.9672490358352661, 23.00956916809082, 0.9784406423568726,
-                                                                                          1.0],
-                                                                                         [-0.032750993967056274, 24.00956916809082, 0.9784406423568726,
-                                                                                          1.0],
-                                                                                         [0.9672490358352661, 24.00956916809082, 0.9784406423568726,
-                                                                                          1.0],
-                                                                                         [-0.032750993967056274, 23.00956916809082, 1.9784406423568726,
-                                                                                          1.0],
-                                                                                         [0.9672490358352661, 23.00956916809082, 1.9784406423568726,
-                                                                                          1.0],
-                                                                                         [0.9672490358352661, 24.00956916809082, 1.978440761566162,
-                                                                                          1.0],
-                                                                                         [-0.032750993967056274, 24.00956916809082, 1.978440761566162,
-                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_2_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
-                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
-                                                    [-0.03365015983581543, 22.004610061645508, 0.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 22.004610061645508, 0.9893019199371338, 1.0],
-                                                    [-0.03365015983581543, 21.004610061645508, 0.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 21.004610061645508, 0.9893019199371338, 1.0],
-                                                    [-0.03365015983581543, 22.004610061645508, 1.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 22.004610061645508, 1.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 21.004610061645508, 1.9893016815185547, 1.0],
-                                                    [-0.03365015983581543, 21.004610061645508, 1.9893016815185547, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
-                                                    [-0.03365013003349304, 23.004610061645508, 0.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 23.004610061645508, 0.9893019199371338, 1.0],
-                                                    [-0.03365013003349304, 22.004610061645508, 0.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 22.004610061645508, 0.9893019199371338, 1.0],
-                                                    [-0.03365013003349304, 23.004610061645508, 1.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 23.004610061645508, 1.9893019199371338, 1.0],
-                                                    [0.9663498401641846, 22.004610061645508, 1.9893019199371338, 1.0],
-                                                    [-0.03365013003349304, 22.004610061645508, 1.9893019199371338, 1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
-                                                                    [-0.03365015983581543, 21.004610061645508, 0.9893019199371338, 1.0],
-                                                                    [0.9663498401641846, 21.004610061645508, 0.9893019199371338, 1.0],
-                                                                    [-0.03365015983581543, 20.004610061645508, 0.9893019199371338, 1.0],
-                                                                    [0.9663498401641846, 20.004610061645508, 0.9893019199371338, 1.0],
-                                                                    [-0.03365015983581543, 21.004610061645508, 1.9893019199371338, 1.0],
-                                                                    [0.9663498401641846, 21.004610061645508, 1.9893019199371338, 1.0],
-                                                                    [0.9663498401641846, 20.004610061645508, 1.9893016815185547, 1.0],
-                                                                    [-0.03365015983581543, 20.004610061645508, 1.9893016815185547, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
-                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
-                                                                                     'vertex_positions': [
-                                                                                         [-1.0336501598358154, 21.004610061645508, 0.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-0.03365015983581543, 21.004610061645508, 0.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-1.0336501598358154, 20.004610061645508, 0.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-0.03365015983581543, 20.004610061645508, 0.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-1.0336501598358154, 21.004610061645508, 1.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-0.03365015983581543, 21.004610061645508, 1.9893019199371338,
-                                                                                          1.0],
-                                                                                         [-0.03365015983581543, 20.004610061645508, 1.9893016815185547,
-                                                                                          1.0],
-                                                                                         [-1.0336501598358154, 20.004610061645508, 1.9893016815185547,
-                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_4_mesh_data': {
-                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
-                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
-                                                    [-0.03736519813537598, 22.007953643798828, 0.9787225127220154, 1.0],
-                                                    [0.962634801864624, 22.007953643798828, 0.9787225127220154, 1.0],
-                                                    [-0.03736519813537598, 21.007953643798828, 0.9787225723266602, 1.0],
-                                                    [0.962634801864624, 21.007953643798828, 0.9787225723266602, 1.0],
-                                                    [-0.03736519813537598, 22.007953643798828, 1.9787225723266602, 1.0],
-                                                    [0.962634801864624, 22.007953643798828, 1.9787225723266602, 1.0],
-                                                    [0.962634801864624, 21.007953643798828, 1.9787225723266602, 1.0],
-                                                    [-0.03736519813537598, 21.007953643798828, 1.9787225723266602, 1.0]], 'numPolygons': 6}],
-                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0],
-                                                                 'vertex_positions': [[-1.037365198135376, 22.007953643798828, 0.9787225127220154, 1.0],
-                                                                                      [-0.03736519813537598, 22.007953643798828, 0.9787225127220154,
-                                                                                       1.0],
-                                                                                      [-1.037365198135376, 21.007953643798828, 0.9787225723266602, 1.0],
-                                                                                      [-0.03736519813537598, 21.007953643798828, 0.9787225723266602,
-                                                                                       1.0],
-                                                                                      [-1.037365198135376, 22.007953643798828, 1.9787225723266602, 1.0],
-                                                                                      [-0.03736519813537598, 22.007953643798828, 1.9787225723266602,
-                                                                                       1.0],
-                                                                                      [-0.03736519813537598, 21.007953643798828, 1.9787225723266602,
-                                                                                       1.0],
-                                                                                      [-1.037365198135376, 21.007953643798828, 1.9787225723266602,
-                                                                                       1.0]], 'numPolygons': 6},
-                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
-                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
-                                                                    [-0.03736519813537598, 23.007953643798828, 0.9787225127220154, 1.0],
-                                                                    [0.962634801864624, 23.007953643798828, 0.9787225127220154, 1.0],
-                                                                    [-0.03736519813537598, 22.007953643798828, 0.9787225723266602, 1.0],
-                                                                    [0.962634801864624, 22.007953643798828, 0.9787225723266602, 1.0],
-                                                                    [-0.03736519813537598, 23.007953643798828, 1.9787225723266602, 1.0],
-                                                                    [0.962634801864624, 23.007953643798828, 1.9787225723266602, 1.0],
-                                                                    [0.962634801864624, 22.007953643798828, 1.9787225723266602, 1.0],
-                                                                    [-0.03736519813537598, 22.007953643798828, 1.9787225723266602, 1.0]],
-                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
-                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
-                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
-                                                                                     'vertex_positions': [
-                                                                                         [-1.037365198135376, 21.007953643798828, 0.9787225127220154,
-                                                                                          1.0],
-                                                                                         [-0.03736519813537598, 21.007953643798828, 0.9787225127220154,
-                                                                                          1.0],
-                                                                                         [-1.037365198135376, 20.007953643798828, 0.9787225723266602,
-                                                                                          1.0],
-                                                                                         [-0.03736519813537598, 20.007953643798828, 0.9787225723266602,
-                                                                                          1.0],
-                                                                                         [-1.037365198135376, 21.007953643798828, 1.9787225723266602,
-                                                                                          1.0],
-                                                                                         [-0.03736519813537598, 21.007953643798828, 1.9787225723266602,
-                                                                                          1.0],
-                                                                                         [-0.03736519813537598, 20.007953643798828, 1.9787225723266602,
-                                                                                          1.0],
-                                                                                         [-1.037365198135376, 20.007953643798828, 1.9787225723266602,
-                                                                                          1.0]], 'numPolygons': 6}]}
-                                          }
+                                                    [-1.0303959846496582, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-0.030395925045013428, 20.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-1.0303959846496582, 21.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-0.030395925045013428, 21.998565673828125, 1.0007339715957642, 1.0],
+                                                    [-1.0303959846496582, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                    [-0.030395925045013428, 20.998565673828125, 2.0007338523864746, 1.0],
+                                                    [-0.030395925045013428, 21.998565673828125, 2.0007338523864746, 1.0],
+                                                    [-1.0303959846496582, 21.998565673828125, 2.0007338523864746, 1.0]], 'numPolygons': 6}],
+                                            'rest_shape_data': None}, 'figure_5_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
+                                                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [0.9697561264038086, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 22.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [0.9697561264038086, 22.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 21.005300521850586, 1.9831539392471313, 1.0],
+                                                                                    [0.9697561264038086, 21.005300521850586, 1.9831539392471313, 1.0],
+                                                                                    [0.9697561264038086, 22.005300521850586, 1.983154058456421, 1.0],
+                                                                                    [-0.030243873596191406, 22.005300521850586, 1.983154058456421, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-1.0302438735961914, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-1.0302438735961914, 22.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 22.005300521850586, 0.9831539392471313, 1.0],
+                                                                                    [-1.0302438735961914, 21.005300521850586, 1.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 21.005300521850586, 1.9831539392471313, 1.0],
+                                                                                    [-0.030243873596191406, 22.005300521850586, 1.983154058456421, 1.0],
+                                                                                    [-1.0302438735961914, 22.005300521850586, 1.983154058456421, 1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                                    [-0.030243873596191406, 20.005300521850586, 0.9831539392471313, 1.0],
+                                                                                                    [0.9697561264038086, 20.005300521850586, 0.9831539392471313, 1.0],
+                                                                                                    [-0.030243873596191406, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                                    [0.9697561264038086, 21.005300521850586, 0.9831539392471313, 1.0],
+                                                                                                    [-0.030243873596191406, 20.005300521850586, 1.9831539392471313, 1.0],
+                                                                                                    [0.9697561264038086, 20.005300521850586, 1.9831539392471313, 1.0],
+                                                                                                    [0.9697561264038086, 21.005300521850586, 1.983154058456421, 1.0],
+                                                                                                    [-0.030243873596191406, 21.005300521850586, 1.983154058456421, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
+                                                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-1.0302438735961914, 22.005300521850586, 0.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-0.030243873596191406, 22.005300521850586, 0.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0302438735961914, 23.005300521850586, 0.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-0.030243873596191406, 23.005300521850586, 0.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0302438735961914, 22.005300521850586, 1.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-0.030243873596191406, 22.005300521850586, 1.9831539392471313,
+                                                                                                                          1.0],
+                                                                                                                         [-0.030243873596191406, 23.005300521850586, 1.983154058456421,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0302438735961914, 23.005300521850586, 1.983154058456421,
+                                                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_3_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
+                                                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                    [-0.031080782413482666, 22.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 22.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [-0.031080782413482666, 21.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 21.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [-0.031080782413482666, 22.002187728881836, 1.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 22.002187728881836, 1.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 21.002187728881836, 1.9874248504638672, 1.0],
+                                                                                    [-0.031080782413482666, 21.002187728881836, 1.9874248504638672, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                    [-0.031080782413482666, 21.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 21.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [-0.031080782413482666, 20.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 20.002187728881836, 0.9874250888824463, 1.0],
+                                                                                    [-0.031080782413482666, 21.002187728881836, 1.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 21.002187728881836, 1.9874250888824463, 1.0],
+                                                                                    [0.9689192175865173, 20.002187728881836, 1.9874248504638672, 1.0],
+                                                                                    [-0.031080782413482666, 20.002187728881836, 1.9874248504638672, 1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                                    [-0.031080782413482666, 23.002187728881836, 0.9874250888824463, 1.0],
+                                                                                                    [0.9689192175865173, 23.002187728881836, 0.9874250888824463, 1.0],
+                                                                                                    [-0.031080782413482666, 22.002187728881836, 0.9874250888824463, 1.0],
+                                                                                                    [0.9689192175865173, 22.002187728881836, 0.9874250888824463, 1.0],
+                                                                                                    [-0.031080782413482666, 23.002187728881836, 1.9874250888824463, 1.0],
+                                                                                                    [0.9689192175865173, 23.002187728881836, 1.9874250888824463, 1.0],
+                                                                                                    [0.9689192175865173, 22.002187728881836, 1.9874248504638672, 1.0],
+                                                                                                    [-0.031080782413482666, 22.002187728881836, 1.9874248504638672, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
+                                                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-1.031080722808838, 22.002187728881836, 0.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-0.031080782413482666, 22.002187728881836, 0.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-1.031080722808838, 21.002187728881836, 0.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-0.031080782413482666, 21.002187728881836, 0.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-1.031080722808838, 22.002187728881836, 1.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-0.031080782413482666, 22.002187728881836, 1.9874250888824463,
+                                                                                                                          1.0],
+                                                                                                                         [-0.031080782413482666, 21.002187728881836, 1.9874248504638672,
+                                                                                                                          1.0],
+                                                                                                                         [-1.031080722808838, 21.002187728881836, 1.9874248504638672,
+                                                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_1_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
+                                                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-0.03058791160583496, 21.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 21.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [-0.03058791160583496, 22.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 22.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [-0.03058791160583496, 21.000961303710938, 1.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 21.000961303710938, 1.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 22.000961303710938, 1.9876477718353271, 1.0],
+                                                                                    [-0.03058791160583496, 22.000961303710938, 1.9876477718353271, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-0.030587881803512573, 20.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 20.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [-0.030587881803512573, 21.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 21.000961303710938, 0.9876478910446167, 1.0],
+                                                                                    [-0.030587881803512573, 20.000961303710938, 1.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 20.000961303710938, 1.9876478910446167, 1.0],
+                                                                                    [0.969412088394165, 21.000961303710938, 1.9876477718353271, 1.0],
+                                                                                    [-0.030587881803512573, 21.000961303710938, 1.9876477718353271, 1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                                    [-0.03058791160583496, 22.000961303710938, 0.9876478910446167, 1.0],
+                                                                                                    [0.969412088394165, 22.000961303710938, 0.9876478910446167, 1.0],
+                                                                                                    [-0.03058791160583496, 23.000961303710938, 0.9876478910446167, 1.0],
+                                                                                                    [0.969412088394165, 23.000961303710938, 0.9876478910446167, 1.0],
+                                                                                                    [-0.03058791160583496, 22.000961303710938, 1.9876478910446167, 1.0],
+                                                                                                    [0.969412088394165, 22.000961303710938, 1.9876478910446167, 1.0],
+                                                                                                    [0.969412088394165, 23.000961303710938, 1.9876477718353271, 1.0],
+                                                                                                    [-0.03058791160583496, 23.000961303710938, 1.9876477718353271, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
+                                                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-1.030587911605835, 22.000961303710938, 0.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03058791160583496, 22.000961303710938, 0.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-1.030587911605835, 23.000961303710938, 0.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03058791160583496, 23.000961303710938, 0.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-1.030587911605835, 22.000961303710938, 1.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03058791160583496, 22.000961303710938, 1.9876478910446167,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03058791160583496, 23.000961303710938, 1.9876477718353271,
+                                                                                                                          1.0],
+                                                                                                                         [-1.030587911605835, 23.000961303710938, 1.9876477718353271,
+                                                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_6_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2,
+                                                                                                                                  7, 6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-0.032750993967056274, 22.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 22.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [-0.032750993967056274, 23.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 23.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [-0.032750993967056274, 22.00364875793457, 1.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 22.00364875793457, 1.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 23.00364875793457, 1.978440761566162, 1.0],
+                                                                                    [-0.032750993967056274, 23.00364875793457, 1.978440761566162, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                    [-0.032750993967056274, 20.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 20.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [-0.032750993967056274, 21.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 21.00364875793457, 0.9784406423568726, 1.0],
+                                                                                    [-0.032750993967056274, 20.00364875793457, 1.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 20.00364875793457, 1.9784406423568726, 1.0],
+                                                                                    [0.9672490358352661, 21.00364875793457, 1.978440761566162, 1.0],
+                                                                                    [-0.032750993967056274, 21.00364875793457, 1.978440761566162, 1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4, 1, 3, 6, 5, 3, 2, 7,
+                                                                                                                                6, 2, 0, 4, 7], 'vertex_positions': [
+                                                                                                    [-0.032750993967056274, 21.00364875793457, 0.9784406423568726, 1.0],
+                                                                                                    [0.9672490358352661, 21.00364875793457, 0.9784406423568726, 1.0],
+                                                                                                    [-0.032750993967056274, 22.00364875793457, 0.9784406423568726, 1.0],
+                                                                                                    [0.9672490358352661, 22.00364875793457, 0.9784406423568726, 1.0],
+                                                                                                    [-0.032750993967056274, 21.00364875793457, 1.9784406423568726, 1.0],
+                                                                                                    [0.9672490358352661, 21.00364875793457, 1.9784406423568726, 1.0],
+                                                                                                    [0.9672490358352661, 22.00364875793457, 1.978440761566162, 1.0],
+                                                                                                    [-0.032750993967056274, 22.00364875793457, 1.978440761566162, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 5, 6, 7, 0, 2, 3, 1, 0, 1, 5, 4,
+                                                                                                                                                    1, 3, 6, 5, 3, 2, 7, 6, 2, 0, 4, 7],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-0.032750993967056274, 23.00956916809082, 0.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [0.9672490358352661, 23.00956916809082, 0.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [-0.032750993967056274, 24.00956916809082, 0.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [0.9672490358352661, 24.00956916809082, 0.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [-0.032750993967056274, 23.00956916809082, 1.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [0.9672490358352661, 23.00956916809082, 1.9784406423568726,
+                                                                                                                          1.0],
+                                                                                                                         [0.9672490358352661, 24.00956916809082, 1.978440761566162,
+                                                                                                                          1.0],
+                                                                                                                         [-0.032750993967056274, 24.00956916809082, 1.978440761566162,
+                                                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_2_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
+                                                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                    [-0.03365015983581543, 22.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 22.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [-0.03365015983581543, 21.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 21.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [-0.03365015983581543, 22.004610061645508, 1.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 22.004610061645508, 1.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 21.004610061645508, 1.9893016815185547, 1.0],
+                                                                                    [-0.03365015983581543, 21.004610061645508, 1.9893016815185547, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                    [-0.03365013003349304, 23.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 23.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [-0.03365013003349304, 22.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 22.004610061645508, 0.9893019199371338, 1.0],
+                                                                                    [-0.03365013003349304, 23.004610061645508, 1.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 23.004610061645508, 1.9893019199371338, 1.0],
+                                                                                    [0.9663498401641846, 22.004610061645508, 1.9893019199371338, 1.0],
+                                                                                    [-0.03365013003349304, 22.004610061645508, 1.9893019199371338, 1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                                    [-0.03365015983581543, 21.004610061645508, 0.9893019199371338, 1.0],
+                                                                                                    [0.9663498401641846, 21.004610061645508, 0.9893019199371338, 1.0],
+                                                                                                    [-0.03365015983581543, 20.004610061645508, 0.9893019199371338, 1.0],
+                                                                                                    [0.9663498401641846, 20.004610061645508, 0.9893019199371338, 1.0],
+                                                                                                    [-0.03365015983581543, 21.004610061645508, 1.9893019199371338, 1.0],
+                                                                                                    [0.9663498401641846, 21.004610061645508, 1.9893019199371338, 1.0],
+                                                                                                    [0.9663498401641846, 20.004610061645508, 1.9893016815185547, 1.0],
+                                                                                                    [-0.03365015983581543, 20.004610061645508, 1.9893016815185547, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
+                                                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-1.0336501598358154, 21.004610061645508, 0.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03365015983581543, 21.004610061645508, 0.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0336501598358154, 20.004610061645508, 0.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03365015983581543, 20.004610061645508, 0.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0336501598358154, 21.004610061645508, 1.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03365015983581543, 21.004610061645508, 1.9893019199371338,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03365015983581543, 20.004610061645508, 1.9893016815185547,
+                                                                                                                          1.0],
+                                                                                                                         [-1.0336501598358154, 20.004610061645508, 1.9893016815185547,
+                                                                                                                          1.0]], 'numPolygons': 6}]}, 'figure_4_mesh_data': {
+                                                                            'center_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                   'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6,
+                                                                                                                                  7, 2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                    [-0.03736519813537598, 22.007953643798828, 0.9787225127220154, 1.0],
+                                                                                    [0.962634801864624, 22.007953643798828, 0.9787225127220154, 1.0],
+                                                                                    [-0.03736519813537598, 21.007953643798828, 0.9787225723266602, 1.0],
+                                                                                    [0.962634801864624, 21.007953643798828, 0.9787225723266602, 1.0],
+                                                                                    [-0.03736519813537598, 22.007953643798828, 1.9787225723266602, 1.0],
+                                                                                    [0.962634801864624, 22.007953643798828, 1.9787225723266602, 1.0],
+                                                                                    [0.962634801864624, 21.007953643798828, 1.9787225723266602, 1.0],
+                                                                                    [-0.03736519813537598, 21.007953643798828, 1.9787225723266602, 1.0]], 'numPolygons': 6}],
+                                                                            'rest_shape_data': [{'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0],
+                                                                                                 'vertex_positions': [[-1.037365198135376, 22.007953643798828, 0.9787225127220154, 1.0],
+                                                                                                                      [-0.03736519813537598, 22.007953643798828, 0.9787225127220154,
+                                                                                                                       1.0],
+                                                                                                                      [-1.037365198135376, 21.007953643798828, 0.9787225723266602, 1.0],
+                                                                                                                      [-0.03736519813537598, 21.007953643798828, 0.9787225723266602,
+                                                                                                                       1.0],
+                                                                                                                      [-1.037365198135376, 22.007953643798828, 1.9787225723266602, 1.0],
+                                                                                                                      [-0.03736519813537598, 22.007953643798828, 1.9787225723266602,
+                                                                                                                       1.0],
+                                                                                                                      [-0.03736519813537598, 21.007953643798828, 1.9787225723266602,
+                                                                                                                       1.0],
+                                                                                                                      [-1.037365198135376, 21.007953643798828, 1.9787225723266602,
+                                                                                                                       1.0]], 'numPolygons': 6},
+                                                                                                {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                 'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1, 1, 5, 6, 3, 3, 6, 7,
+                                                                                                                                2, 2, 7, 4, 0], 'vertex_positions': [
+                                                                                                    [-0.03736519813537598, 23.007953643798828, 0.9787225127220154, 1.0],
+                                                                                                    [0.962634801864624, 23.007953643798828, 0.9787225127220154, 1.0],
+                                                                                                    [-0.03736519813537598, 22.007953643798828, 0.9787225723266602, 1.0],
+                                                                                                    [0.962634801864624, 22.007953643798828, 0.9787225723266602, 1.0],
+                                                                                                    [-0.03736519813537598, 23.007953643798828, 1.9787225723266602, 1.0],
+                                                                                                    [0.962634801864624, 23.007953643798828, 1.9787225723266602, 1.0],
+                                                                                                    [0.962634801864624, 22.007953643798828, 1.9787225723266602, 1.0],
+                                                                                                    [-0.03736519813537598, 22.007953643798828, 1.9787225723266602, 1.0]],
+                                                                                                 'numPolygons': 6}, {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
+                                                                                                                     'vertex_indexes_per_polygon': [4, 7, 6, 5, 0, 1, 3, 2, 0, 4, 5, 1,
+                                                                                                                                                    1, 5, 6, 3, 3, 6, 7, 2, 2, 7, 4, 0],
+                                                                                                                     'vertex_positions': [
+                                                                                                                         [-1.037365198135376, 21.007953643798828, 0.9787225127220154,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03736519813537598, 21.007953643798828, 0.9787225127220154,
+                                                                                                                          1.0],
+                                                                                                                         [-1.037365198135376, 20.007953643798828, 0.9787225723266602,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03736519813537598, 20.007953643798828, 0.9787225723266602,
+                                                                                                                          1.0],
+                                                                                                                         [-1.037365198135376, 21.007953643798828, 1.9787225723266602,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03736519813537598, 21.007953643798828, 1.9787225723266602,
+                                                                                                                          1.0],
+                                                                                                                         [-0.03736519813537598, 20.007953643798828, 1.9787225723266602,
+                                                                                                                          1.0],
+                                                                                                                         [-1.037365198135376, 20.007953643798828, 1.9787225723266602,
+                                                                                                                          1.0]], 'numPolygons': 6}]}
+                                        }
         self.figures_mesh_keys_list = list(self.figures_mesh_creation_data.keys())
         self.active_figure_name = ""
         self.min_y = 0
@@ -1099,14 +1116,20 @@ class TetrisDialog(QtWidgets.QDialog):
         self.max_x = 5
         self.locked_cells_dict = dict()
         self.go_next_figure = True
-        self.is_game_paused = False
+
         self.continue_game()
 
     def continue_game(self):
         # TODO: UPDATE THIS CYCLE TO 30 (or 60) times per second updates
         # increase figures falling speed with each figure born
-        test_break_counter = 0
-        while test_break_counter < 100:
+        move_counter = 0
+        iterations_count = 0
+        speed_multiplier = 1.0
+        while True:
+            if iterations_count == 60*10 and speed_multiplier > 0:
+                speed_multiplier = speed_multiplier - 0.15
+                iterations_count = 0
+
             cmds.refresh()
             QApplication.processEvents()
 
@@ -1116,11 +1139,14 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.active_figure_name = self.generate_random_figure()
             self.go_next_figure = False
 
-            self.move_figure("translateY")
-
-            test_break_counter += 1
             self.modelPanel.repaint()
-            time.sleep(0.1)
+            time.sleep(1/60)
+            move_counter += 1
+            iterations_count += 1
+
+            if move_counter == int(20*speed_multiplier):
+                self.move_figure("translateY")
+                move_counter = 0
 
             if self.is_game_paused:
                 break
