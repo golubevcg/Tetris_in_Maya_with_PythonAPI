@@ -522,6 +522,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.continue_game()
         elif not self.active_figure_name:
             return
+            
         elif e.key() == 16777234:
             self.left_button.setStyleSheet("background-color: #51c2b8;")
             self.move_figure("translateX", transform_value=-1)
@@ -617,15 +618,24 @@ class TetrisDialog(QtWidgets.QDialog):
         self.pre_setup_tetris()
 
     def setup_ui_buttons_and_labels(self):
+        transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);"
+
+        self.paneLayout_widget.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.paneLayout_widget.setAutoFillBackground(False)
+
         points_label = QLabel("000000", self.paneLayout_widget)
-        points_label.setStyleSheet("font-family:Roboto;font-size:40pt;font-weight:400;font-style:bold;")
+        points_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        points_label.setAutoFillBackground(False)
+        points_label.setStyleSheet("font-family:Roboto; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);")
         points_label.setFixedHeight(50)
         points_label.setFixedWidth(200)
         points_label.move(410, 70)
         points_label.setWordWrap(True)
 
         self.pause_label = QLabel("Game paused", self.paneLayout_widget)
-        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;")
+        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);")
+        self.pause_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.pause_label.setAutoFillBackground(False)
         self.pause_label.setFixedHeight(50)
         self.pause_label.setFixedWidth(200)
         self.pause_label.move(397, 300)
@@ -646,10 +656,13 @@ class TetrisDialog(QtWidgets.QDialog):
 
         enter_label = QLabel("Press Enter to start the game", self.paneLayout_widget)
         enter_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        enter_label.setStyleSheet(transparent_background_color_stylesheet)
         enter_label.setFixedHeight(200)
         enter_label.setFixedWidth(100)
         enter_label.move(414, 52)
         enter_label.setWordWrap(True)
+        enter_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        enter_label.setAutoFillBackground(False)
 
         self.escape_button = QPushButton("Esc", self.paneLayout_widget)
         self.escape_button.setFixedHeight(45)
@@ -659,33 +672,49 @@ class TetrisDialog(QtWidgets.QDialog):
 
         esc_label = QLabel("Esc to pause the game", self.paneLayout_widget)
         esc_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        esc_label.setStyleSheet(transparent_background_color_stylesheet)
         esc_label.setFixedHeight(200)
         esc_label.setFixedWidth(100)
         esc_label.move(414, 102)
         esc_label.setWordWrap(True)
+        esc_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        esc_label.setAutoFillBackground(False)
 
         up_help_label = QLabel("Up arrow - rotate right", self.paneLayout_widget)
+        up_help_label.setStyleSheet(transparent_background_color_stylesheet)
         up_help_label.setFixedHeight(50)
         up_help_label.setFixedWidth(150)
         up_help_label.move(420, 635)
         up_help_label.setWordWrap(True)
+        up_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        up_help_label.setAutoFillBackground(False)
 
         down_help_label = QLabel("Down arrow - rotate left", self.paneLayout_widget)
+        down_help_label.setStyleSheet(transparent_background_color_stylesheet)
         down_help_label.setFixedHeight(50)
         down_help_label.setFixedWidth(150)
         down_help_label.move(420,650)
         down_help_label.setWordWrap(True)
+        down_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        down_help_label.setAutoFillBackground(False)
 
         left_right_help_label = QLabel("Left, Right arrow - move figure left or right", self.paneLayout_widget)
+        left_right_help_label.setStyleSheet(transparent_background_color_stylesheet)
         left_right_help_label.setFixedHeight(50)
         left_right_help_label.setFixedWidth(150)
         left_right_help_label.move(420, 680)
         left_right_help_label.setWordWrap(True)
+        left_right_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        left_right_help_label.setAutoFillBackground(False)
+        
         space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self.paneLayout_widget)
+        space_help_label.setStyleSheet(transparent_background_color_stylesheet)
         space_help_label.setFixedHeight(50)
         space_help_label.setFixedWidth(150)
         space_help_label.move(420, 720)
         space_help_label.setWordWrap(True)
+        space_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        space_help_label.setAutoFillBackground(False)
 
         self.left_button = QPushButton("Left", self.paneLayout_widget)
         self.left_button.setFixedHeight(45)
@@ -1126,6 +1155,8 @@ class TetrisDialog(QtWidgets.QDialog):
         iterations_count = 0
         speed_multiplier = 1.0
         while True:
+            self.check_line_is_single_color()
+
             if iterations_count == 60*10 and speed_multiplier > 0:
                 speed_multiplier = speed_multiplier - 0.15
                 iterations_count = 0
@@ -1392,6 +1423,28 @@ class TetrisDialog(QtWidgets.QDialog):
                 break
             recursion_brake += 1
 
+    def check_line_is_single_color(self):
+        stash = dict()
+        for centroid_coords in self.locked_cells_dict:
+            y_val = centroid_coords[1]
+            child_shape_name = self.locked_cells_dict[centroid_coords]["child_shape_name"]
+            print "child_shape_name:", child_shape_name
+
+            if y_val in stash:
+                stored_shapes = stash[y_val]
+                stash[y_val] = stored_shapes.append(child_shape_name)
+            else:
+                stash[y_val] = [child_shape_name]
+
+        shape_names_to_remove = []
+        for key in stash:
+            shapes_list = stash[key]
+            if shapes_list and len(shapes_list)==10:
+                shape_names_to_remove.extend(shapes_list)
+
+        # if it is, 
+        # remove all shapes in this coords, move all figures one item down
+        # update points label, check again -> such situation can be multiple
 
 def launch_window():
     # pointer to the maya main window
