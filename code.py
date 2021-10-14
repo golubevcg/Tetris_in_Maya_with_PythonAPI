@@ -1260,7 +1260,7 @@ class TetrisDialog(QtWidgets.QDialog):
         return material, sg
 
     def create_shader_with_color(self, color, shader_name):
-        color = [55, 0, 0]
+        # color = [55, 0, 0]
         material_name, sg_name = self.create_shader(shader_name)
         cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
         return material_name, sg_name
@@ -1367,6 +1367,8 @@ class TetrisDialog(QtWidgets.QDialog):
             result_dict[current_xy_centroid] = temp_dict
 
     def check_mesh_update_allowed(self, mesh_name, locked_cells_dict):
+
+        # TODO: fix figure stop moving during collision with another figure
         child_shapes = self.get_all_descendent_child_shapes(mesh_name)
 
         if not child_shapes:
