@@ -1161,7 +1161,7 @@ class TetrisDialog(QtWidgets.QDialog):
             QApplication.processEvents()
 
             if self.iterations_count == int(self.fps*20) and self.speed_multiplier > 0:
-                self.speed_multiplier = self.speed_multiplier - 0.15
+                self.speed_multiplier = self.speed_multiplier - 0.1
                 self.iterations_count = 0
                 self.move_counter = 0
 
@@ -1260,7 +1260,7 @@ class TetrisDialog(QtWidgets.QDialog):
         return material, sg
 
     def create_shader_with_color(self, color, shader_name):
-        # color = [55, 0, 0]
+        color = [55, 0, 0]
         material_name, sg_name = self.create_shader(shader_name)
         cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
         return material_name, sg_name
@@ -1313,6 +1313,7 @@ class TetrisDialog(QtWidgets.QDialog):
                                           vertex_indexes_per_polygon,
                                           transform_mfn_dag.object()
                                           )
+                cmds.xform(transform_mfn_dag.fullPathName(), centerPivots=True)
 
     def generate_random_figure(self):
         rand_mesh_index = randint(0, len(self.figures_mesh_creation_data) - 1)
@@ -1321,13 +1322,16 @@ class TetrisDialog(QtWidgets.QDialog):
         figure_dag_name = figure_transform_mfn_dag.fullPathName()
         figure_random_key = self.figures_mesh_keys_list[rand_mesh_index]
         figure_data = self.figures_mesh_creation_data[figure_random_key]
+
         center_shape_data = figure_data["center_shape_data"]
         if center_shape_data:
             self.create_figures(center_shape_data, figure_transform_mfn_dag)
             cmds.xform(figure_dag_name, centerPivots=True)
+
         rest_shapes_data = figure_data["rest_shape_data"]
         if rest_shapes_data:
             self.create_figures(rest_shapes_data, figure_transform_mfn_dag)
+
         rand_shader_index = randint(0, 4)
         rand_shader_shading_group = self.shaders_shading_groups_list[rand_shader_index]
         figure_name = figure_transform_mfn_dag.fullPathName()
@@ -1370,7 +1374,6 @@ class TetrisDialog(QtWidgets.QDialog):
 
         # TODO: fix figure stop moving during collision with another figure
         child_shapes = self.get_all_descendent_child_shapes(mesh_name)
-
         if not child_shapes:
             return False
 
@@ -1439,9 +1442,11 @@ class TetrisDialog(QtWidgets.QDialog):
 
         stored_centroids_before_translate = dict()
         self.get_all_child_shapes_xy_centroids_list(shape_name, stored_centroids_before_translate)
+        print "current_position:", current_position, "transform_value:", transform_value
         cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
         transform_update_allowed, x_axis_collision = self.check_mesh_update_allowed(shape_name, self.locked_cells_dict)
+        print "\tshape_name:", shape_name, "\ntransform_update_allowed:", transform_update_allowed
         if not transform_update_allowed:
             cmds.setAttr(current_figure_translate_y_attr_name, current_position)
             if not x_axis_collision:
@@ -1489,24 +1494,39 @@ class TetrisDialog(QtWidgets.QDialog):
             return
 
         for shape in shapes_list:
-            if cmds.objExists(shape):
-                cmds.delete(shape)
+            parent = shape
+            if cmds.nodeType(parent) == "mesh":
+                parent = cmds.listRelatives(parent, parent=True)[0]
+            if cmds.objExists(parent):
+                cmds.delete(parent)
 
         for centroid_coord in self.locked_cells_dict.keys():
             y_val = centroid_coord[1]
             if y_val == line_y_val:
                 del self.locked_cells_dict[centroid_coord]
 
-        time.sleep(0.1)
-
-        for centroid_coord in self.locked_cells_dict.keys():
+        shapes_to_move_down = []
+        for centroid_coord in self.locked_cells_dict:
             y_val = centroid_coord[1]
-            if y_val > line_y_val:
+            if y_val >= line_y_val:
                 shape_to_move_down = self.locked_cells_dict[centroid_coord]["child_shape_name"]
-                self.move_figure("translateY", shape_name=shape_to_move_down)
+                shapes_to_move_down.append(shape_to_move_down)
+        print "\n\nShapes been removed, moving down all shapes highier..."
+        for shape_name in shapes_to_move_down:
+            # self.move_figure("translateY", shape_name=shape_name)
+            parent = cmds.listRelatives(shape_name, parent=True)
+            if parent:
+                parent = parent[0]
+                # self.move_figure("translateY", shape_name=parent)
 
-        # iterate ove each locked cell, find one which upper this line and move each shape on
-        # this coords down on 1 y val
+                stored_centroids_before_translate = dict()
+                self.get_all_child_shapes_xy_centroids_list(parent, stored_centroids_before_translate)
+
+                current_figure_translate_y_attr_name = "%s.translateY"%parent
+                current_position = cmds.getAttr(current_figure_translate_y_attr_name)
+                cmds.setAttr(current_figure_translate_y_attr_name, current_position - 1.0)
+                self.update_locked_cells_list(parent, self.locked_cells_dict,
+                                              cleanup_previous_locked_cells=stored_centroids_before_translate)
 
 
 def launch_window():
