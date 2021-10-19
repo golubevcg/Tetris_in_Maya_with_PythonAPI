@@ -628,14 +628,14 @@ class TetrisDialog(QtWidgets.QDialog):
         self.paneLayout_widget.setAttribute(Qt.WA_TranslucentBackground, True)
         self.paneLayout_widget.setAutoFillBackground(False)
 
-        points_label = QLabel("000000", self.paneLayout_widget)
-        points_label.setAttribute(Qt.WA_TranslucentBackground, True)
-        points_label.setAutoFillBackground(False)
-        points_label.setStyleSheet("font-family:Roboto; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);")
-        points_label.setFixedHeight(50)
-        points_label.setFixedWidth(200)
-        points_label.move(410, 70)
-        points_label.setWordWrap(True)
+        self.points_label = QLabel("000000", self.paneLayout_widget)
+        self.points_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.points_label.setAutoFillBackground(False)
+        self.points_label.setStyleSheet("font-family:Roboto; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);")
+        self.points_label.setFixedHeight(50)
+        self.points_label.setFixedWidth(200)
+        self.points_label.move(410, 70)
+        self.points_label.setWordWrap(True)
 
         self.pause_label = QLabel("Game paused", self.paneLayout_widget)
         self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);")
@@ -1299,21 +1299,22 @@ class TetrisDialog(QtWidgets.QDialog):
     def create_figures(self, figures_creation_data, parent):
         if figures_creation_data:
             for data in figures_creation_data:
-                transform_mfn_dag = OpenMaya.MFnDagNode()
-                transform_mfn_dag.create("transform", parent.object())
-
                 number_of_vertices_per_polygon = data["number_of_vertices_per_polygon"]
                 vertex_indexes_per_polygon = data["vertex_indexes_per_polygon"]
                 vertex_positions_raw_data = data["vertex_positions"]
                 polygon_count = data["numPolygons"]
 
-                OpenMayaUtils.create_mesh(polygon_count,
+                shape_transform_mobj = OpenMayaUtils.create_mesh(polygon_count,
                                           vertex_positions_raw_data,
                                           number_of_vertices_per_polygon,
-                                          vertex_indexes_per_polygon,
-                                          transform_mfn_dag.object()
+                                          vertex_indexes_per_polygon
                                           )
+                transform_mfn_dag = OpenMaya.MFnDagNode(shape_transform_mobj)
                 cmds.xform(transform_mfn_dag.fullPathName(), centerPivots=True)
+
+                mfn_dag_modifier = OpenMaya.MDagModifier()
+                mfn_dag_modifier.reparentNode(shape_transform_mobj, parent)
+                mfn_dag_modifier.doIt()
 
     def generate_random_figure(self):
         rand_mesh_index = randint(0, len(self.figures_mesh_creation_data) - 1)
@@ -1325,12 +1326,12 @@ class TetrisDialog(QtWidgets.QDialog):
 
         center_shape_data = figure_data["center_shape_data"]
         if center_shape_data:
-            self.create_figures(center_shape_data, figure_transform_mfn_dag)
+            self.create_figures(center_shape_data, figure_transform_mfn_dag.object())
             cmds.xform(figure_dag_name, centerPivots=True)
 
         rest_shapes_data = figure_data["rest_shape_data"]
         if rest_shapes_data:
-            self.create_figures(rest_shapes_data, figure_transform_mfn_dag)
+            self.create_figures(rest_shapes_data, figure_transform_mfn_dag.object())
 
         rand_shader_index = randint(0, 4)
         rand_shader_shading_group = self.shaders_shading_groups_list[rand_shader_index]
@@ -1511,22 +1512,28 @@ class TetrisDialog(QtWidgets.QDialog):
             if y_val >= line_y_val:
                 shape_to_move_down = self.locked_cells_dict[centroid_coord]["child_shape_name"]
                 shapes_to_move_down.append(shape_to_move_down)
-        print "\n\nShapes been removed, moving down all shapes highier..."
+
         for shape_name in shapes_to_move_down:
-            # self.move_figure("translateY", shape_name=shape_name)
             parent = cmds.listRelatives(shape_name, parent=True)
             if parent:
                 parent = parent[0]
-                # self.move_figure("translateY", shape_name=parent)
 
                 stored_centroids_before_translate = dict()
                 self.get_all_child_shapes_xy_centroids_list(parent, stored_centroids_before_translate)
-
-                current_figure_translate_y_attr_name = "%s.translateY"%parent
-                current_position = cmds.getAttr(current_figure_translate_y_attr_name)
-                cmds.setAttr(current_figure_translate_y_attr_name, current_position - 1.0)
+                cmds.move( 0, -1, 0, parent, relative=True)
                 self.update_locked_cells_list(parent, self.locked_cells_dict,
                                               cleanup_previous_locked_cells=stored_centroids_before_translate)
+
+        
+        points_multiplier = 10 - self.speed_multiplier*5
+        print "self.speed_multiplier:", self.speed_multiplier
+        earned_points = int(10 * points_multiplier)
+        print "earned_points:", earned_points
+        current_points = self.points_label.text()
+        current_points = int(current_points) + earned_points
+        result_string = str(current_points).zfill(6)
+        print "result_string:", result_string
+        self.points_label.setText(result_string)
 
 
 def launch_window():
