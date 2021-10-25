@@ -522,7 +522,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.continue_game()
         elif not self.active_figure_name:
             return
-            
+
         elif e.key() == 16777234:
             self.left_button.setStyleSheet("background-color: #51c2b8;")
             self.move_figure("translateX", transform_value=-1)
@@ -711,7 +711,7 @@ class TetrisDialog(QtWidgets.QDialog):
         left_right_help_label.setWordWrap(True)
         left_right_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         left_right_help_label.setAutoFillBackground(False)
-        
+
         space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self.paneLayout_widget)
         space_help_label.setStyleSheet(transparent_background_color_stylesheet)
         space_help_label.setFixedHeight(50)
@@ -1383,7 +1383,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
             if tuple(child_cords) in locked_cells_dict.keys() and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
                 return False, False
-            
+
             if not self.min_y < child_cords[1] < self.max_y:
                 return False, False
 
@@ -1443,11 +1443,9 @@ class TetrisDialog(QtWidgets.QDialog):
 
         stored_centroids_before_translate = dict()
         self.get_all_child_shapes_xy_centroids_list(shape_name, stored_centroids_before_translate)
-        print "current_position:", current_position, "transform_value:", transform_value
         cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
         transform_update_allowed, x_axis_collision = self.check_mesh_update_allowed(shape_name, self.locked_cells_dict)
-        print "\tshape_name:", shape_name, "\ntransform_update_allowed:", transform_update_allowed
         if not transform_update_allowed:
             cmds.setAttr(current_figure_translate_y_attr_name, current_position)
             if not x_axis_collision:
@@ -1524,16 +1522,16 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.update_locked_cells_list(parent, self.locked_cells_dict,
                                               cleanup_previous_locked_cells=stored_centroids_before_translate)
 
-        
+
         points_multiplier = 10 - self.speed_multiplier*5
-        print "self.speed_multiplier:", self.speed_multiplier
         earned_points = int(10 * points_multiplier)
-        print "earned_points:", earned_points
         current_points = self.points_label.text()
         current_points = int(current_points) + earned_points
         result_string = str(current_points).zfill(6)
-        print "result_string:", result_string
+
         self.points_label.setText(result_string)
+        self.points_label.repaint()
+        self.modelPanel.update()
 
 
 def launch_window():
