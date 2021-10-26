@@ -563,6 +563,10 @@ class TetrisDialog(QtWidgets.QDialog):
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.MSWindowsFixedSizeDialogHint)
         self.setWindowTitle("PyQt ModelPanel Test")
 
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAutoFillBackground(False)
+        self.setContentsMargins(0,0,0,0)
+
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
         self.verticalLayout.setContentsMargins(0,0,0,0)
 
@@ -574,9 +578,13 @@ class TetrisDialog(QtWidgets.QDialog):
         layout = OpenMayaUI.MQtUtil.fullName(long(shiboken2.getCppPointer(self.verticalLayout)[0]))
         cmds.setParent(layout)
 
+        self.created_nodes = []
+
+        self.default_model_panel = None
         paneLayoutName = cmds.paneLayout()
         for model_panel in cmds.getPanel(type="modelPanel"):
             if cmds.modelEditor(model_panel, q=1, av=1):
+                self.default_model_panel = model_panel
                 cmds.modelEditor(model_panel, e=1, allObjects=False)
 
         # Find a pointer to the paneLayout that we just created
@@ -584,17 +592,23 @@ class TetrisDialog(QtWidgets.QDialog):
 
         # Wrap the pointer into a python QObject
         self.paneLayout_widget = shiboken2.wrapInstance(long(ptr), QtWidgets.QWidget)
+        self.paneLayout_widget.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.paneLayout_widget.setAutoFillBackground(False)
 
         self.setup_ui_buttons_and_labels()
 
         self.camera_transform_name = cmds.camera()[0]
+        self.created_nodes.append(self.camera_transform_name)
+
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
         uuid_test = uuid.uuid4()
         self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
+        cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=False, barLayout=False)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
                          cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=0)
+
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleCount\" 16;" \
@@ -602,13 +616,13 @@ class TetrisDialog(QtWidgets.QDialog):
                    "setAttr \"hardwareRenderingGlobals.ssaoRadius\" 10;"
         mel.eval(commands)
 
-        #TODO: remove additional UI at the top of viewport
-
         # Find a pointer to the modelPanel that we just created
         ptr = OpenMayaUI.MQtUtil.findControl(self.modelPanelName)
 
         # Wrap the pointer into a python QObject
         self.modelPanel = shiboken2.wrapInstance(int(ptr), QtWidgets.QWidget)
+        self.modelPanel.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.modelPanel.setAutoFillBackground(False)
 
         # add our QObject reference to the paneLayout to our layout
         self.verticalLayout.addWidget(self.paneLayout_widget)
@@ -625,10 +639,7 @@ class TetrisDialog(QtWidgets.QDialog):
     def setup_ui_buttons_and_labels(self):
         transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);"
 
-        self.paneLayout_widget.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.paneLayout_widget.setAutoFillBackground(False)
-
-        self.points_label = QLabel("000000", self.paneLayout_widget)
+        self.points_label = QLabel("000000", self)
         self.points_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.points_label.setAutoFillBackground(False)
         self.points_label.setStyleSheet("font-family:Roboto; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);")
@@ -637,7 +648,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.points_label.move(410, 70)
         self.points_label.setWordWrap(True)
 
-        self.pause_label = QLabel("Game paused", self.paneLayout_widget)
+        self.pause_label = QLabel("Game paused", self)
         self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);")
         self.pause_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.pause_label.setAutoFillBackground(False)
@@ -646,20 +657,20 @@ class TetrisDialog(QtWidgets.QDialog):
         self.pause_label.move(397, 300)
         self.pause_label.setVisible(False)
 
-        self.press_enter_to_start = QLabel("press Enter to continue", self.paneLayout_widget)
+        self.press_enter_to_start = QLabel("press Enter to continue", self)
         self.press_enter_to_start.setFixedHeight(50)
         self.press_enter_to_start.setFixedWidth(250)
         self.press_enter_to_start.move(435, 325)
         self.press_enter_to_start.setVisible(False)
 
         qpush_button_standart_stylesheet = "QPushButton {background-color: #444444;  border: 2px; border-color:#51c2b8; border-radius:4px; color:white;}"
-        self.enter_button = QPushButton("Enter", self.paneLayout_widget)
+        self.enter_button = QPushButton("Enter", self)
         self.enter_button.setFixedHeight(45)
         self.enter_button.setFixedWidth(45)
         self.enter_button.move(520, 130)
         self.enter_button.setStyleSheet(qpush_button_standart_stylesheet)
 
-        enter_label = QLabel("Press Enter to start the game", self.paneLayout_widget)
+        enter_label = QLabel("Press Enter to start the game", self)
         enter_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         enter_label.setStyleSheet(transparent_background_color_stylesheet)
         enter_label.setFixedHeight(200)
@@ -669,13 +680,13 @@ class TetrisDialog(QtWidgets.QDialog):
         enter_label.setAttribute(Qt.WA_TranslucentBackground, True)
         enter_label.setAutoFillBackground(False)
 
-        self.escape_button = QPushButton("Esc", self.paneLayout_widget)
+        self.escape_button = QPushButton("Esc", self)
         self.escape_button.setFixedHeight(45)
         self.escape_button.setFixedWidth(45)
         self.escape_button.move(520, 180)
         self.escape_button.setStyleSheet(qpush_button_standart_stylesheet)
 
-        esc_label = QLabel("Esc to pause the game", self.paneLayout_widget)
+        esc_label = QLabel("Esc to pause the game", self)
         esc_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         esc_label.setStyleSheet(transparent_background_color_stylesheet)
         esc_label.setFixedHeight(200)
@@ -685,7 +696,7 @@ class TetrisDialog(QtWidgets.QDialog):
         esc_label.setAttribute(Qt.WA_TranslucentBackground, True)
         esc_label.setAutoFillBackground(False)
 
-        up_help_label = QLabel("Up arrow - rotate right", self.paneLayout_widget)
+        up_help_label = QLabel("Up arrow - rotate right", self)
         up_help_label.setStyleSheet(transparent_background_color_stylesheet)
         up_help_label.setFixedHeight(50)
         up_help_label.setFixedWidth(150)
@@ -694,7 +705,7 @@ class TetrisDialog(QtWidgets.QDialog):
         up_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         up_help_label.setAutoFillBackground(False)
 
-        down_help_label = QLabel("Down arrow - rotate left", self.paneLayout_widget)
+        down_help_label = QLabel("Down arrow - rotate left", self)
         down_help_label.setStyleSheet(transparent_background_color_stylesheet)
         down_help_label.setFixedHeight(50)
         down_help_label.setFixedWidth(150)
@@ -703,7 +714,7 @@ class TetrisDialog(QtWidgets.QDialog):
         down_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         down_help_label.setAutoFillBackground(False)
 
-        left_right_help_label = QLabel("Left, Right arrow - move figure left or right", self.paneLayout_widget)
+        left_right_help_label = QLabel("Left, Right arrow - move figure left or right", self)
         left_right_help_label.setStyleSheet(transparent_background_color_stylesheet)
         left_right_help_label.setFixedHeight(50)
         left_right_help_label.setFixedWidth(150)
@@ -712,7 +723,7 @@ class TetrisDialog(QtWidgets.QDialog):
         left_right_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         left_right_help_label.setAutoFillBackground(False)
 
-        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self.paneLayout_widget)
+        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self)
         space_help_label.setStyleSheet(transparent_background_color_stylesheet)
         space_help_label.setFixedHeight(50)
         space_help_label.setFixedWidth(150)
@@ -721,33 +732,33 @@ class TetrisDialog(QtWidgets.QDialog):
         space_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         space_help_label.setAutoFillBackground(False)
 
-        self.left_button = QPushButton("Left", self.paneLayout_widget)
+        self.left_button = QPushButton("Left", self)
         self.left_button.setFixedHeight(45)
         self.left_button.setFixedWidth(45)
         self.left_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.left_button.move(420, 550)
 
-        self.down_button = QPushButton("Down", self.paneLayout_widget)
+        self.down_button = QPushButton("Down", self)
         self.down_button.setFlat(True)
         self.down_button.setFixedHeight(45)
         self.down_button.setFixedWidth(45)
         self.down_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.down_button.move(470, 550)
 
-        self.right_button = QPushButton("Right", self.paneLayout_widget)
+        self.right_button = QPushButton("Right", self)
         self.right_button.setFixedHeight(45)
         self.right_button.setFixedWidth(45)
         self.right_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.right_button.move(520, 550)
 
-        self.up_button = QPushButton("Up", self.paneLayout_widget)
+        self.up_button = QPushButton("Up", self)
         self.up_button.setFlat(True)
         self.up_button.setFixedHeight(45)
         self.up_button.setFixedWidth(45)
         self.up_button.setStyleSheet(qpush_button_standart_stylesheet)
         self.up_button.move(470, 500)
 
-        self.space_button = QPushButton("Space", self.paneLayout_widget)
+        self.space_button = QPushButton("Space", self)
         self.space_button.setFixedHeight(35)
         self.space_button.setFixedWidth(145)
         self.space_button.setStyleSheet(qpush_button_standart_stylesheet)
@@ -757,10 +768,19 @@ class TetrisDialog(QtWidgets.QDialog):
         print("Closing game!")
         # remove all created nodes
         # reapply viewport settings to default or to stored before changing
+        cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=True, barLayout=True)
+        cmds.modelEditor(self.default_model_panel, e=1, allObjects=True)
+        mel.eval("paneLayout -e -manage true $gMainPane")
+        cmds.modelPanel(self.default_model_panel, e=True, cam="persp")
+
+        for node in self.created_nodes:
+            try:
+                cmds.delete(node)
+            except:
+                pass
         pass
 
     def pre_setup_tetris(self):
-        self.created_nodes = []
         field_obj = Field()
         field_obj.apply_transformation_matrix()
         field_obj.apply_default_shader()
@@ -1141,7 +1161,7 @@ class TetrisDialog(QtWidgets.QDialog):
                                                                                                                           1.0],
                                                                                                                          [-1.037365198135376, 20.007953643798828, 1.9787225723266602,
                                                                                                                           1.0]], 'numPolygons': 6}]}
-                                        }
+                                            }
         self.figures_mesh_keys_list = list(self.figures_mesh_creation_data.keys())
         self.active_figure_name = ""
         self.min_y = 0
@@ -1196,12 +1216,14 @@ class TetrisDialog(QtWidgets.QDialog):
         global mfn_transform
         dagModifier = OpenMaya.MDagModifier()
         light_mobj = dagModifier.createNode('transform')
-        dagModifier.renameNode(light_mobj, 'pointLight1')
+        point_light_name = 'pointLight1'
+        dagModifier.renameNode(light_mobj, point_light_name)
         dagModifier.doIt()
         # create and setup point light
         mfn_point_light = OpenMaya.MFnPointLight()
         mfn_point_light.create(light_mobj)
-        self.created_nodes.append(mfn_point_light.fullPathName())
+        self.created_nodes.append(point_light_name)
+
         mfn_point_light.setIntensity(2)
         mlight_tranformation_matrix = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0],
                                        [3.369167279610191, 22.611715134569895, 4.389972436762605, 1.0]]
@@ -1321,6 +1343,8 @@ class TetrisDialog(QtWidgets.QDialog):
         figure_transform_mfn_dag = OpenMaya.MFnDagNode()
         figure_transform_mfn_dag.create("transform", "figure_%s" % str(rand_mesh_index))
         figure_dag_name = figure_transform_mfn_dag.fullPathName()
+        self.created_nodes.append(figure_dag_name)
+
         figure_random_key = self.figures_mesh_keys_list[rand_mesh_index]
         figure_data = self.figures_mesh_creation_data[figure_random_key]
 
