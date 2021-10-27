@@ -504,7 +504,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
         if e.key() == 16777216:
-            self.escape_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.escape_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             if self.is_game_paused:
                 self.close_game()
                 self.close()
@@ -513,7 +513,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.pause_label.setVisible(True)
                 self.press_enter_to_start.setVisible(True)
         elif e.key() == 16777220:
-            self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             if not self.game_played_currently:
                 self.start_game()
             elif self.is_game_paused:
@@ -525,19 +525,19 @@ class TetrisDialog(QtWidgets.QDialog):
             return
 
         elif e.key() == 16777234:
-            self.left_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.left_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("translateX", transform_value=-1)
         elif e.key() == 16777236:
-            self.right_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.right_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("translateX", transform_value=1)
         elif e.key() == 16777235:
-            self.up_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.up_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("rotateZ", transform_value=90)
         elif e.key() == 16777237:
-            self.down_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.down_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("rotateZ", transform_value=-90)
         elif e.key() == 32:
-            self.space_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
+            self.space_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure_to_the_bottom()
 
     def keyReleaseEvent(self, e):
@@ -609,7 +609,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
-                         cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=0)
+                         cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=1)
 
         cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=False, barLayout=False)
 
@@ -636,27 +636,65 @@ class TetrisDialog(QtWidgets.QDialog):
         self.fps = 30
         self.move_counter = 0
         self.iterations_count = 0
-        self.speed_multiplier = 1.0*3
+        self.speed_multiplier = 1.0*1.25
 
+        self.pre_setup_viewport_colors()
         self.pre_setup_tetris()
 
-    def get_button_stylesheet(self, background_color="trasnparent", border_color="#51c2b8", text_color="#51c2b8"):
+    def pre_setup_viewport_colors(self):
+        self.current_background_color = cmds.displayRGBColor("background", q=True)
+        cmds.displayRGBColor("background", 0, 0, 0)
+
+        self.color_index = 18
+        self.color = [0, 0.657, 1]
+        self.prev_color_index_value = cmds.colorIndex(self.color_index, q=True)
+        cmds.colorIndex(18, self.color[0], self.color[1], self.color[2])
+
+        self.current_gridAxis_index = cmds.displayColor("gridAxis", q=True)
+        cmds.displayColor("gridAxis", self.color_index)
+
+        self.current_gridHighlight_index = cmds.displayColor("gridHighlight", q=True)
+        cmds.displayColor("gridHighlight", self.color_index)
+
+        self.current_grid_index = cmds.displayColor("grid", q=True)
+        cmds.displayColor("grid", self.color_index)
+
+        self.current_polymesh_index = cmds.displayColor("polymesh", q=True)
+        cmds.displayColor("polymesh", self.color_index)
+
+    def revert_viewport_colors(self):
+        self.current_background_color = cmds.displayRGBColor("background", q=True)
+        cmds.displayRGBColor("background", self.current_background_color[0],
+                                           self.current_background_color[1],
+                                           self.current_background_color[2])
+
+        self.prev_color_index_value = cmds.colorIndex(self.color_index, q=True)
+        cmds.colorIndex(18, self.prev_color_index_value[0],
+                            self.prev_color_index_value[0],
+                            self.prev_color_index_value[0])
+
+        cmds.displayColor("gridAxis", self.current_gridAxis_index)
+        cmds.displayColor("gridHighlight", self.current_gridHighlight_index)
+        cmds.displayColor("grid", self.current_grid_index)
+        cmds.displayColor("polymesh", self.current_polymesh_index)
+
+    def get_button_stylesheet(self, background_color="trasnparent", border_color="#32a7ff", text_color="#32a7ff"):
         return "QPushButton {background-color: %s; border-style: solid; border-width: 2px; border-color:%s; border-radius:4px; color:%s; font-weight:bold; font-size:13px}"%(background_color, border_color, text_color)
 
     def setup_ui_buttons_and_labels(self):
-        transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#51c2b8;font-size:13px;"
+        transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#32a7ff; font-size:13px;"
 
         self.points_label = QLabel("000000", self)
         self.points_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.points_label.setAutoFillBackground(False)
-        self.points_label.setStyleSheet("font-family:Consolas; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);color:#51c2b8;")
+        self.points_label.setStyleSheet("font-family:Consolas; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);color:#32a7ff;")
         self.points_label.setFixedHeight(50)
         self.points_label.setFixedWidth(200)
         self.points_label.move(410, 70)
         self.points_label.setWordWrap(True)
 
         self.pause_label = QLabel("Game paused", self)
-        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#51c2b8;")
+        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#32a7ff;")
         self.pause_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.pause_label.setAutoFillBackground(False)
         self.pause_label.setFixedHeight(50)
@@ -777,13 +815,21 @@ class TetrisDialog(QtWidgets.QDialog):
         mel.eval("paneLayout -e -manage true $gMainPane")
         cmds.modelPanel(self.default_model_panel, e=True, cam="persp")
 
-        # for node in self.created_nodes:
-        #     try:
-        #         cmds.delete(node)
-        #     except:
-        #         pass
+        print "self.lambert1_color_value:", self.lambert1_color_value
+        mel.eval('setAttr "lambert1.color" -type double3 {0} {1} {1} ;'.format(self.lambert1_color_value[0],
+                                                                               self.lambert1_color_value[1],
+                                                                               self.lambert1_color_value[2]))
+        self.revert_viewport_colors()
+        for node in self.created_nodes:
+            try:
+                cmds.delete(node)
+            except:
+                pass
 
     def pre_setup_tetris(self):
+        self.lambert1_color_value = cmds.getAttr("lambert1.color")[0]
+        mel.eval('setAttr "lambert1.color" -type double3 0.025974 0.025974 0.025974 ;')
+
         field_obj = Field()
         field_obj.apply_transformation_matrix()
         field_obj.apply_default_shader()
