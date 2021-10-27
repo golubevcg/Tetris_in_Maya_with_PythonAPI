@@ -498,21 +498,22 @@ class Field:
 class TetrisDialog(QtWidgets.QDialog):
 
     def closeEvent(self, e):
-        print "CLOSE EVENT!"
         self.is_game_paused = True
         self.close_game()
         super(TetrisDialog, self).closeEvent(e)
 
     def keyPressEvent(self, e):
         if e.key() == 16777216:
+            self.escape_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             if self.is_game_paused:
                 self.close_game()
+                self.close()
             else:
                 self.is_game_paused = True
                 self.pause_label.setVisible(True)
                 self.press_enter_to_start.setVisible(True)
         elif e.key() == 16777220:
-            self.enter_button.setStyleSheet("background-color: #51c2b8;")
+            self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             if not self.game_played_currently:
                 self.start_game()
             elif self.is_game_paused:
@@ -524,36 +525,38 @@ class TetrisDialog(QtWidgets.QDialog):
             return
 
         elif e.key() == 16777234:
-            self.left_button.setStyleSheet("background-color: #51c2b8;")
+            self.left_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             self.move_figure("translateX", transform_value=-1)
         elif e.key() == 16777236:
-            self.right_button.setStyleSheet("background-color: #51c2b8;")
+            self.right_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             self.move_figure("translateX", transform_value=1)
         elif e.key() == 16777235:
-            self.up_button.setStyleSheet("background-color: #51c2b8;")
+            self.up_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             self.move_figure("rotateZ", transform_value=90)
         elif e.key() == 16777237:
-            self.down_button.setStyleSheet("background-color: #51c2b8;")
+            self.down_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             self.move_figure("rotateZ", transform_value=-90)
         elif e.key() == 32:
-            self.space_button.setStyleSheet("background-color: #51c2b8;")
+            self.space_button.setStyleSheet(self.get_button_stylesheet(background_color="#51c2b8", text_color="black"))
             self.move_figure_to_the_bottom()
 
     def keyReleaseEvent(self, e):
         if e.key() == 16777220:
-            self.enter_button.setStyleSheet("background-color: #444444;")
+            self.enter_button.setStyleSheet(self.get_button_stylesheet())
+        elif e.key() == 16777216:
+            self.escape_button.setStyleSheet(self.get_button_stylesheet())
         elif not self.active_figure_name:
             return
         elif e.key() == 16777234:
-            self.left_button.setStyleSheet("background-color: #444444;")
+            self.left_button.setStyleSheet(self.get_button_stylesheet())
         elif e.key() == 16777236:
-            self.right_button.setStyleSheet("background-color: #444444;")
+            self.right_button.setStyleSheet(self.get_button_stylesheet())
         elif e.key() == 16777235:
-            self.up_button.setStyleSheet("background-color: #444444;")
+            self.up_button.setStyleSheet(self.get_button_stylesheet())
         elif e.key() == 16777237:
-            self.down_button.setStyleSheet("background-color: #444444;")
+            self.down_button.setStyleSheet(self.get_button_stylesheet())
         elif e.key() == 32:
-            self.space_button.setStyleSheet("background-color: #444444;")
+            self.space_button.setStyleSheet(self.get_button_stylesheet())
 
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
@@ -604,10 +607,11 @@ class TetrisDialog(QtWidgets.QDialog):
 
         uuid_test = uuid.uuid4()
         self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
-        cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=False, barLayout=False)
 
         cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
                          cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=0)
+
+        cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=False, barLayout=False)
 
         commands = "setAttr \"hardwareRenderingGlobals.lineAAEnable\" 1;" \
                    "setAttr \"hardwareRenderingGlobals.multiSampleEnable\" 1;" \
@@ -632,24 +636,27 @@ class TetrisDialog(QtWidgets.QDialog):
         self.fps = 30
         self.move_counter = 0
         self.iterations_count = 0
-        self.speed_multiplier = 1.0
+        self.speed_multiplier = 1.0*3
 
         self.pre_setup_tetris()
 
+    def get_button_stylesheet(self, background_color="trasnparent", border_color="#51c2b8", text_color="#51c2b8"):
+        return "QPushButton {background-color: %s; border-style: solid; border-width: 2px; border-color:%s; border-radius:4px; color:%s; font-weight:bold; font-size:13px}"%(background_color, border_color, text_color)
+
     def setup_ui_buttons_and_labels(self):
-        transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);"
+        transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#51c2b8;font-size:13px;"
 
         self.points_label = QLabel("000000", self)
         self.points_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.points_label.setAutoFillBackground(False)
-        self.points_label.setStyleSheet("font-family:Roboto; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);")
+        self.points_label.setStyleSheet("font-family:Consolas; font-size:40pt; font-weight:400; font-style:bold; background-color:rgba(0, 0, 0, 0);color:#51c2b8;")
         self.points_label.setFixedHeight(50)
         self.points_label.setFixedWidth(200)
         self.points_label.move(410, 70)
         self.points_label.setWordWrap(True)
 
         self.pause_label = QLabel("Game paused", self)
-        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);")
+        self.pause_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#51c2b8;")
         self.pause_label.setAttribute(Qt.WA_TranslucentBackground, True)
         self.pause_label.setAutoFillBackground(False)
         self.pause_label.setFixedHeight(50)
@@ -658,17 +665,17 @@ class TetrisDialog(QtWidgets.QDialog):
         self.pause_label.setVisible(False)
 
         self.press_enter_to_start = QLabel("press Enter to continue", self)
+        self.press_enter_to_start.setStyleSheet(transparent_background_color_stylesheet)
         self.press_enter_to_start.setFixedHeight(50)
         self.press_enter_to_start.setFixedWidth(250)
         self.press_enter_to_start.move(435, 325)
         self.press_enter_to_start.setVisible(False)
 
-        qpush_button_standart_stylesheet = "QPushButton {background-color: #444444;  border: 2px; border-color:#51c2b8; border-radius:4px; color:white;}"
         self.enter_button = QPushButton("Enter", self)
         self.enter_button.setFixedHeight(45)
         self.enter_button.setFixedWidth(45)
         self.enter_button.move(520, 130)
-        self.enter_button.setStyleSheet(qpush_button_standart_stylesheet)
+        self.enter_button.setStyleSheet(self.get_button_stylesheet())
 
         enter_label = QLabel("Press Enter to start the game", self)
         enter_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -684,7 +691,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.escape_button.setFixedHeight(45)
         self.escape_button.setFixedWidth(45)
         self.escape_button.move(520, 180)
-        self.escape_button.setStyleSheet(qpush_button_standart_stylesheet)
+        self.escape_button.setStyleSheet(self.get_button_stylesheet())
 
         esc_label = QLabel("Esc to pause the game", self)
         esc_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -700,7 +707,7 @@ class TetrisDialog(QtWidgets.QDialog):
         up_help_label.setStyleSheet(transparent_background_color_stylesheet)
         up_help_label.setFixedHeight(50)
         up_help_label.setFixedWidth(150)
-        up_help_label.move(420, 635)
+        up_help_label.move(420, 605)
         up_help_label.setWordWrap(True)
         up_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         up_help_label.setAutoFillBackground(False)
@@ -709,7 +716,7 @@ class TetrisDialog(QtWidgets.QDialog):
         down_help_label.setStyleSheet(transparent_background_color_stylesheet)
         down_help_label.setFixedHeight(50)
         down_help_label.setFixedWidth(150)
-        down_help_label.move(420,650)
+        down_help_label.move(420,620)
         down_help_label.setWordWrap(True)
         down_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         down_help_label.setAutoFillBackground(False)
@@ -718,7 +725,7 @@ class TetrisDialog(QtWidgets.QDialog):
         left_right_help_label.setStyleSheet(transparent_background_color_stylesheet)
         left_right_help_label.setFixedHeight(50)
         left_right_help_label.setFixedWidth(150)
-        left_right_help_label.move(420, 680)
+        left_right_help_label.move(420, 652)
         left_right_help_label.setWordWrap(True)
         left_right_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         left_right_help_label.setAutoFillBackground(False)
@@ -727,7 +734,7 @@ class TetrisDialog(QtWidgets.QDialog):
         space_help_label.setStyleSheet(transparent_background_color_stylesheet)
         space_help_label.setFixedHeight(50)
         space_help_label.setFixedWidth(150)
-        space_help_label.move(420, 720)
+        space_help_label.move(420, 698)
         space_help_label.setWordWrap(True)
         space_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         space_help_label.setAutoFillBackground(False)
@@ -735,50 +742,46 @@ class TetrisDialog(QtWidgets.QDialog):
         self.left_button = QPushButton("Left", self)
         self.left_button.setFixedHeight(45)
         self.left_button.setFixedWidth(45)
-        self.left_button.setStyleSheet(qpush_button_standart_stylesheet)
-        self.left_button.move(420, 550)
+        self.left_button.setStyleSheet(self.get_button_stylesheet())
+        self.left_button.move(420, 530)
 
         self.down_button = QPushButton("Down", self)
         self.down_button.setFlat(True)
         self.down_button.setFixedHeight(45)
         self.down_button.setFixedWidth(45)
-        self.down_button.setStyleSheet(qpush_button_standart_stylesheet)
-        self.down_button.move(470, 550)
+        self.down_button.setStyleSheet(self.get_button_stylesheet())
+        self.down_button.move(470, 530)
 
         self.right_button = QPushButton("Right", self)
         self.right_button.setFixedHeight(45)
         self.right_button.setFixedWidth(45)
-        self.right_button.setStyleSheet(qpush_button_standart_stylesheet)
-        self.right_button.move(520, 550)
+        self.right_button.setStyleSheet(self.get_button_stylesheet())
+        self.right_button.move(520, 530)
 
         self.up_button = QPushButton("Up", self)
         self.up_button.setFlat(True)
         self.up_button.setFixedHeight(45)
         self.up_button.setFixedWidth(45)
-        self.up_button.setStyleSheet(qpush_button_standart_stylesheet)
-        self.up_button.move(470, 500)
+        self.up_button.setStyleSheet(self.get_button_stylesheet())
+        self.up_button.move(470, 480)
 
         self.space_button = QPushButton("Space", self)
         self.space_button.setFixedHeight(35)
         self.space_button.setFixedWidth(145)
-        self.space_button.setStyleSheet(qpush_button_standart_stylesheet)
-        self.space_button.move(420, 600)
+        self.space_button.setStyleSheet(self.get_button_stylesheet())
+        self.space_button.move(420, 580)
 
     def close_game(self):
-        print("Closing game!")
-        # remove all created nodes
-        # reapply viewport settings to default or to stored before changing
         cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=True, barLayout=True)
         cmds.modelEditor(self.default_model_panel, e=1, allObjects=True)
         mel.eval("paneLayout -e -manage true $gMainPane")
         cmds.modelPanel(self.default_model_panel, e=True, cam="persp")
 
-        for node in self.created_nodes:
-            try:
-                cmds.delete(node)
-            except:
-                pass
-        pass
+        # for node in self.created_nodes:
+        #     try:
+        #         cmds.delete(node)
+        #     except:
+        #         pass
 
     def pre_setup_tetris(self):
         field_obj = Field()
@@ -1282,7 +1285,7 @@ class TetrisDialog(QtWidgets.QDialog):
         return material, sg
 
     def create_shader_with_color(self, color, shader_name):
-        color = [55, 0, 0]
+        # color = [55, 0, 0]
         material_name, sg_name = self.create_shader(shader_name)
         cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
         return material_name, sg_name
