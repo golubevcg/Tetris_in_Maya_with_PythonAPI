@@ -636,7 +636,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.fps = 30
         self.move_counter = 0
         self.iterations_count = 0
-        self.speed_multiplier = 1.0*1.25
+        self.speed_multiplier = 0.85
 
         self.pre_setup_viewport_colors()
         self.pre_setup_tetris()
@@ -1301,7 +1301,7 @@ class TetrisDialog(QtWidgets.QDialog):
         # create and setup ambient light
         mfn_ambient_light = OpenMaya.MFnAmbientLight()
         mfn_ambient_light.create(ambient_light_mobj)
-        mfn_ambient_light.setIntensity(0.200)
+        mfn_ambient_light.setIntensity(0.400)
 
     def setup_camera(self, camera_name, camera_transform):
 
@@ -1569,7 +1569,33 @@ class TetrisDialog(QtWidgets.QDialog):
         for key in stash:
             shapes_list = stash[key]
             if shapes_list and len(shapes_list)==10:
-                self.remove_shapes_line(shapes_list, key)
+                if self.check_shapes_have_same_shader(shapes_list):
+                    self.remove_shapes_line(shapes_list, key)
+
+    def check_shapes_have_same_shader(self, shapes_list):
+
+        if not shapes_list:
+            return
+
+        shader_name =  None
+        for shape in shapes_list:
+            shape_shading_engine = cmds.listConnections(shape, type="shadingEngine")
+            shading_engine_connection = cmds.listConnections(shape_shading_engine)
+            shape_shader_name = cmds.ls(shading_engine_connection, materials=True)
+            if shape_shader_name:
+                shape_shader_name = shape_shader_name[0]
+
+            if not shader_name:
+                shader_name = shape_shader_name
+                continue
+
+            if shape_shader_name == shader_name:
+                continue
+            else:
+                return False
+
+        return True
+
 
     def remove_shapes_line(self, shapes_list, line_y_val):
 
