@@ -683,6 +683,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def setup_ui_buttons_and_labels(self):
         transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#32a7ff; font-size:13px;"
+        square_button_size = 48
 
         self.points_label = QLabel("000000", self)
         self.points_label.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -710,8 +711,8 @@ class TetrisDialog(QtWidgets.QDialog):
         self.press_enter_to_start.setVisible(False)
 
         self.enter_button = QPushButton("Enter", self)
-        self.enter_button.setFixedHeight(45)
-        self.enter_button.setFixedWidth(45)
+        self.enter_button.setFixedHeight(square_button_size)
+        self.enter_button.setFixedWidth(square_button_size)
         self.enter_button.move(520, 130)
         self.enter_button.setStyleSheet(self.get_button_stylesheet())
 
@@ -726,8 +727,8 @@ class TetrisDialog(QtWidgets.QDialog):
         enter_label.setAutoFillBackground(False)
 
         self.escape_button = QPushButton("Esc", self)
-        self.escape_button.setFixedHeight(45)
-        self.escape_button.setFixedWidth(45)
+        self.escape_button.setFixedHeight(square_button_size)
+        self.escape_button.setFixedWidth(square_button_size)
         self.escape_button.move(520, 180)
         self.escape_button.setStyleSheet(self.get_button_stylesheet())
 
@@ -741,73 +742,83 @@ class TetrisDialog(QtWidgets.QDialog):
         esc_label.setAttribute(Qt.WA_TranslucentBackground, True)
         esc_label.setAutoFillBackground(False)
 
-        up_help_label = QLabel("Up arrow - rotate right", self)
+        self.left_button = QPushButton("Left", self)
+        self.left_button.setFixedHeight(square_button_size)
+        self.left_button.setFixedWidth(square_button_size)
+        self.left_button.setStyleSheet(self.get_button_stylesheet())
+        self.left_button.move(414, 482)
+
+        self.down_button = QPushButton("Down", self)
+        self.down_button.setFlat(True)
+        self.down_button.setFixedHeight(square_button_size)
+        self.down_button.setFixedWidth(square_button_size)
+        self.down_button.setStyleSheet(self.get_button_stylesheet())
+        self.down_button.move(470, 482)
+
+        self.right_button = QPushButton("Right", self)
+        self.right_button.setFixedHeight(square_button_size)
+        self.right_button.setFixedWidth(square_button_size)
+        self.right_button.setStyleSheet(self.get_button_stylesheet())
+        self.right_button.move(526, 482)
+
+        self.up_button = QPushButton("Up", self)
+        self.up_button.setFlat(True)
+        self.up_button.setFixedHeight(square_button_size)
+        self.up_button.setFixedWidth(square_button_size)
+        self.up_button.setStyleSheet(self.get_button_stylesheet())
+        self.up_button.move(470, 427)
+
+        self.space_button = QPushButton("Space", self)
+        self.space_button.setFixedHeight(square_button_size)
+        self.space_button.setFixedWidth(159)
+        self.space_button.setStyleSheet(self.get_button_stylesheet())
+        self.space_button.move(414, 536)
+
+        self.group_box = QGroupBox(self)
+        self.group_box.move(414, 591)
+        self.group_box.setFixedHeight(155)
+        self.group_box.setFixedWidth(159)
+        self.group_box.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.group_box.setAutoFillBackground(False)
+        self.group_box.setContentsMargins(8,8,8,8)
+        qgroup_box_stylesheet = "QGroupBox {background-color: black; border-style: solid; border-width: 2px; border-color:#32a7ff; border-radius:4px;}"
+        self.setStyleSheet(qgroup_box_stylesheet)
+
+        up_help_label = QLabel("Up arrow - rotate right",  self.group_box)
         up_help_label.setStyleSheet(transparent_background_color_stylesheet)
         up_help_label.setFixedHeight(50)
         up_help_label.setFixedWidth(150)
-        up_help_label.move(420, 605)
+        up_help_label.move(8, -8)
         up_help_label.setWordWrap(True)
         up_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         up_help_label.setAutoFillBackground(False)
 
-        down_help_label = QLabel("Down arrow - rotate left", self)
+        down_help_label = QLabel("Down arrow - rotate left", self.group_box)
         down_help_label.setStyleSheet(transparent_background_color_stylesheet)
         down_help_label.setFixedHeight(50)
         down_help_label.setFixedWidth(150)
-        down_help_label.move(420,620)
+        down_help_label.move(8,15)
         down_help_label.setWordWrap(True)
         down_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         down_help_label.setAutoFillBackground(False)
 
-        left_right_help_label = QLabel("Left, Right arrow - move figure left or right", self)
+        left_right_help_label = QLabel("Left, Right arrow - move figure left or right", self.group_box)
         left_right_help_label.setStyleSheet(transparent_background_color_stylesheet)
         left_right_help_label.setFixedHeight(50)
         left_right_help_label.setFixedWidth(150)
-        left_right_help_label.move(420, 652)
+        left_right_help_label.move(8, 47)
         left_right_help_label.setWordWrap(True)
         left_right_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         left_right_help_label.setAutoFillBackground(False)
 
-        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self)
+        space_help_label = QLabel("Space - will move figure maximum to the bottom, until it collided", self.group_box)
         space_help_label.setStyleSheet(transparent_background_color_stylesheet)
         space_help_label.setFixedHeight(50)
         space_help_label.setFixedWidth(150)
-        space_help_label.move(420, 698)
+        space_help_label.move(8, 95)
         space_help_label.setWordWrap(True)
         space_help_label.setAttribute(Qt.WA_TranslucentBackground, True)
         space_help_label.setAutoFillBackground(False)
-
-        self.left_button = QPushButton("Left", self)
-        self.left_button.setFixedHeight(45)
-        self.left_button.setFixedWidth(45)
-        self.left_button.setStyleSheet(self.get_button_stylesheet())
-        self.left_button.move(420, 530)
-
-        self.down_button = QPushButton("Down", self)
-        self.down_button.setFlat(True)
-        self.down_button.setFixedHeight(45)
-        self.down_button.setFixedWidth(45)
-        self.down_button.setStyleSheet(self.get_button_stylesheet())
-        self.down_button.move(470, 530)
-
-        self.right_button = QPushButton("Right", self)
-        self.right_button.setFixedHeight(45)
-        self.right_button.setFixedWidth(45)
-        self.right_button.setStyleSheet(self.get_button_stylesheet())
-        self.right_button.move(520, 530)
-
-        self.up_button = QPushButton("Up", self)
-        self.up_button.setFlat(True)
-        self.up_button.setFixedHeight(45)
-        self.up_button.setFixedWidth(45)
-        self.up_button.setStyleSheet(self.get_button_stylesheet())
-        self.up_button.move(470, 480)
-
-        self.space_button = QPushButton("Space", self)
-        self.space_button.setFixedHeight(35)
-        self.space_button.setFixedWidth(145)
-        self.space_button.setStyleSheet(self.get_button_stylesheet())
-        self.space_button.move(420, 580)
 
     def close_game(self):
         cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=True, barLayout=True)
