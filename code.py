@@ -560,7 +560,9 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def __init__(self, parent, **kwargs):
         super(TetrisDialog, self).__init__(parent, **kwargs)
+        self.game_finished = False
         self.active_figure_name = None
+        self.generated_indexes = []
         self.setObjectName("MyWindow")
         self.resize(600, 800)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.MSWindowsFixedSizeDialogHint)
@@ -582,6 +584,7 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.setParent(layout)
 
         self.created_nodes = []
+        self.generated_figures = set()
 
         self.default_model_panel = None
         paneLayoutName = cmds.paneLayout()
@@ -709,6 +712,34 @@ class TetrisDialog(QtWidgets.QDialog):
         self.press_enter_to_start.setFixedWidth(250)
         self.press_enter_to_start.move(435, 325)
         self.press_enter_to_start.setVisible(False)
+
+        self.game_over_label = QLabel("Game over", self)
+        self.game_over_label.setStyleSheet(transparent_background_color_stylesheet)
+        self.game_over_label.setFixedHeight(50)
+        self.game_over_label.setFixedWidth(250)
+        self.game_over_label.move(435, 325)
+        self.game_over_label.setVisible(False)
+
+        # self.final_score = QLabel("Game over", self)
+        # self.final_score.setStyleSheet(transparent_background_color_stylesheet)
+        # self.final_score.setFixedHeight(50)
+        # self.final_score.setFixedWidth(250)
+        # self.final_score.move(435, 325)
+        # self.final_score.setVisible(False)
+        #
+        # self.enter_to_try_again = QLabel("press Enter to try again", self)
+        # self.enter_to_try_again.setStyleSheet(transparent_background_color_stylesheet)
+        # self.enter_to_try_again.setFixedHeight(50)
+        # self.enter_to_try_again.setFixedWidth(250)
+        # self.enter_to_try_again.move(435, 325)
+        # self.enter_to_try_again.setVisible(False)
+        #
+        # self.escape_to_exit = QLabel("press Escape to exit game", self)
+        # self.escape_to_exit.setStyleSheet(transparent_background_color_stylesheet)
+        # self.escape_to_exit.setFixedHeight(50)
+        # self.escape_to_exit.setFixedWidth(250)
+        # self.escape_to_exit.move(435, 325)
+        # self.escape_to_exit.setVisible(False)
 
         self.enter_button = QPushButton("Enter", self)
         self.enter_button.setFixedHeight(square_button_size)
@@ -838,6 +869,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 pass
 
     def pre_setup_tetris(self):
+
         self.lambert1_color_value = cmds.getAttr("lambert1.color")[0]
         mel.eval('setAttr "lambert1.color" -type double3 0.025974 0.025974 0.025974 ;')
 
@@ -1248,7 +1280,11 @@ class TetrisDialog(QtWidgets.QDialog):
             if self.go_next_figure:
                 default_cells_available = self.check_default_positions_are_locked()
                 if not default_cells_available:
-                    print "Game over!"
+                    self.is_game_over = True
+                    self.game_over_label.setVisible(False)
+                    # show game over label
+                    # show final scores
+                    # small label underneath in which written enter to retry, escape to close game
                     break
 
                 self.check_line_is_single_color()
@@ -1417,10 +1453,18 @@ class TetrisDialog(QtWidgets.QDialog):
         if rest_shapes_data:
             self.create_figures(rest_shapes_data, figure_transform_mfn_dag.object())
 
-        rand_shader_index = randint(0, 4)
+        if len(self.generated_indexes) > 2 and randint(0, 2)>1:
+            rand_shader_index = self.generated_indexes[0]
+            self.generated_indexes = []
+        else:
+            rand_shader_index = randint(0, 4)
+
         rand_shader_shading_group = self.shaders_shading_groups_list[rand_shader_index]
+        self.generated_indexes.append(rand_shader_index)
+
         figure_name = figure_transform_mfn_dag.fullPathName()
         cmds.sets(figure_name, forceElement=rand_shader_shading_group)
+        self.generated_figures.add(figure_name)
 
         return figure_dag_name
 
@@ -1569,8 +1613,11 @@ class TetrisDialog(QtWidgets.QDialog):
         for key in stash:
             shapes_list = stash[key]
             if shapes_list and len(shapes_list)==10:
+                is_line_single_color = False
                 if self.check_shapes_have_same_shader(shapes_list):
-                    self.remove_shapes_line(shapes_list, key)
+                    is_line_single_color=True
+
+                self.remove_shapes_line(shapes_list, key, is_line_single_color)
 
     def check_shapes_have_same_shader(self, shapes_list):
 
@@ -1596,8 +1643,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
         return True
 
-
-    def remove_shapes_line(self, shapes_list, line_y_val):
+    def remove_shapes_line(self, shapes_list, line_y_val, is_line_single_color):
 
         if not shapes_list:
             return
@@ -1632,16 +1678,28 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.update_locked_cells_list(parent, self.locked_cells_dict,
                                               cleanup_previous_locked_cells=stored_centroids_before_translate)
 
-
         points_multiplier = 10 - self.speed_multiplier*5
-        earned_points = int(10 * points_multiplier)
+        earned_points = int(100 * points_multiplier)
+        if is_line_single_color:
+            earned_points = int(2 * earned_points)
+
         current_points = self.points_label.text()
         current_points = int(current_points) + earned_points
         result_string = str(current_points).zfill(6)
 
         self.points_label.setText(result_string)
+        #TODO: check that this repaint and update is necessary
         self.points_label.repaint()
         self.modelPanel.update()
+
+    def retry_game(self):
+        if self.generated_figures:
+            for figure in self.generated_figures:
+                if cmds.objExists(figure):
+                    cmds.delete(figure)
+
+        self.points_label.setText("000000")
+        self.locked_cells_dict = dict()
 
 
 def launch_window():
@@ -1655,6 +1713,5 @@ def launch_window():
 
     return d
 
-#disable main viewport
 mel.eval("paneLayout -e -manage false $gMainPane")
 launch_window()
