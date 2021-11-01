@@ -639,7 +639,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.fps = 30
         self.move_counter = 0
         self.iterations_count = 0
-        self.speed_multiplier = 0.85
+        self.speed_multiplier = 2
 
         self.pre_setup_viewport_colors()
         self.pre_setup_tetris()
@@ -1273,7 +1273,7 @@ class TetrisDialog(QtWidgets.QDialog):
             QApplication.processEvents()
 
             if self.iterations_count == int(self.fps*20) and self.speed_multiplier > 0:
-                self.speed_multiplier = self.speed_multiplier - 0.1
+                self.speed_multiplier = self.speed_multiplier + 0.1
                 self.iterations_count = 0
                 self.move_counter = 0
 
@@ -1287,7 +1287,7 @@ class TetrisDialog(QtWidgets.QDialog):
                     # small label underneath in which written enter to retry, escape to close game
                     break
 
-                self.check_line_is_single_color()
+                self.remove_single_color_lines()
                 self.active_figure_name = self.generate_random_figure()
             self.go_next_figure = False
 
@@ -1469,7 +1469,6 @@ class TetrisDialog(QtWidgets.QDialog):
         return figure_dag_name
 
     def get_shape_xy_centroid(self, mesh_name):
-
         if not mesh_name or not cmds.objExists(mesh_name):
             return
 
@@ -1599,8 +1598,9 @@ class TetrisDialog(QtWidgets.QDialog):
                 return False
         return True
 
-    def check_line_is_single_color(self):
+    def remove_single_color_lines(self):
         stash = dict()
+        print "\nself.locked_cells_dict:", self.locked_cells_dict
         for centroid_coord in self.locked_cells_dict:
             y_val = centroid_coord[1]
             child_shape_name = self.locked_cells_dict[centroid_coord]["child_shape_name"]
@@ -1609,7 +1609,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 stored_shapes.append(child_shape_name)
             else:
                 stash[y_val] = [child_shape_name]
-
+        print "stash:", stash
         for key in stash:
             shapes_list = stash[key]
             if shapes_list and len(shapes_list)==10:
@@ -1644,7 +1644,6 @@ class TetrisDialog(QtWidgets.QDialog):
         return True
 
     def remove_shapes_line(self, shapes_list, line_y_val, is_line_single_color):
-
         if not shapes_list:
             return
 
@@ -1655,11 +1654,12 @@ class TetrisDialog(QtWidgets.QDialog):
             if cmds.objExists(parent):
                 cmds.delete(parent)
 
-        for centroid_coord in self.locked_cells_dict.keys():
-            y_val = centroid_coord[1]
-            if y_val == line_y_val:
-                del self.locked_cells_dict[centroid_coord]
-
+        # for centroid_coord in self.locked_cells_dict.keys():
+        #     y_val = centroid_coord[1]
+        #     if y_val == line_y_val:
+        #         del self.locked_cells_dict[centroid_coord]
+        self.update_collision_data()
+        
         shapes_to_move_down = []
         for centroid_coord in self.locked_cells_dict:
             y_val = centroid_coord[1]
@@ -1675,8 +1675,6 @@ class TetrisDialog(QtWidgets.QDialog):
                 stored_centroids_before_translate = dict()
                 self.get_all_child_shapes_xy_centroids_list(parent, stored_centroids_before_translate)
                 cmds.move( 0, -1, 0, parent, relative=True)
-                self.update_locked_cells_list(parent, self.locked_cells_dict,
-                                              cleanup_previous_locked_cells=stored_centroids_before_translate)
 
         points_multiplier = 10 - self.speed_multiplier*5
         earned_points = int(100 * points_multiplier)
@@ -1691,6 +1689,7 @@ class TetrisDialog(QtWidgets.QDialog):
         #TODO: check that this repaint and update is necessary
         self.points_label.repaint()
         self.modelPanel.update()
+        self.update_collision_data()
 
     def retry_game(self):
         if self.generated_figures:
@@ -1701,7 +1700,25 @@ class TetrisDialog(QtWidgets.QDialog):
         self.points_label.setText("000000")
         self.locked_cells_dict = dict()
 
+    def update_collision_data(self):
+        all_shapes_list = []
+        for figure in self.generated_figures:
+            children = cmds.listRelatives(figure, children=True)
+            all_shapes_list.extend(children)
 
+        self.locked_cells_dict = dict()
+        for shape in all_shapes_list:
+            xy_centroid = self.get_shape_xy_centroid(shape)
+            parent = cmds.listRelatives(shape, parent=True)
+            if parent:
+                parent = parent[0]
+
+            temp_dict = {"parent_transform_name":parent, 
+			             "child_shape_name":shape}
+            self.locked_cells_dict[xy_centroid] = temp_dict
+
+        print "1self.locked_cells_dict:", self.locked_cells_dict
+            
 def launch_window():
     # pointer to the maya main window
     maya_main_window = OpenMayaUI.MQtUtil.mainWindow()
