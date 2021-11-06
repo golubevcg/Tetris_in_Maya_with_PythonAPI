@@ -146,6 +146,17 @@ class OpenMayaUtils:
     def create_mesh(polygon_count, vertex_positions_raw_data, number_of_vertices_per_polygon,
                     vertex_indexes_per_polygon, parent_mobj = None):
 
+        """
+        Generates polygon mesh based on given data.
+        :param polygon_count: amount of polygons in mesh
+        :param vertex_positions_raw_data: floats array with position data for each point, each element is list
+                                            with three floats as positions x, y , z and weight
+        :param number_of_vertices_per_polygon: list of integers with amount of vertexes per polygon
+        :param vertex_indexes_per_polygon: list of vertex indexes for each polygon
+        :param parent_mobj: OpenMaya.MObject of parent object, to which created polymesh will be parented
+        :return: mobject of created mesh, if parent sepcified it will be returned
+        """
+
         vertex_positions_mfloatpoints = OpenMayaUtils.convert_float_lists_array_to_mpoints_array(
             vertex_positions_raw_data)
         meshFn = OpenMaya.MFnMesh()
@@ -167,6 +178,13 @@ class OpenMayaUtils:
 
     @staticmethod
     def make_depend_node(name):
+
+        """
+        Returns OpenMaya.MObject for given node name, if exist.
+        :param name: string name of existing object
+        :return: OpenMaya.MObject of founded object
+        """
+
         node = None
         if name:
             selList = OpenMaya.MSelectionList()
@@ -178,14 +196,16 @@ class OpenMayaUtils:
 
     @staticmethod
     def get_plug_by_name(inObj, inPlugName):
-        """
-        Gets a node's plug as an MPlug.
 
-        @inObj: MObject. Node to get plug from.
+        """
+        Gets a node's plug as an OpenMaya.MPlug.
+
+        @inObj: OpenMaya.MObject. Node to get plug from.
         @inPlugName: String. Name of plug to get from node.
-        @return: MPlug.
+        @return: OpenMaya.MPlug.
         @return: None.
         """
+
         depFn = OpenMaya.MFnDependencyNode(inObj)
         try:
             plug = depFn.findPlug(inPlugName)
@@ -196,12 +216,14 @@ class OpenMayaUtils:
 
     @staticmethod
     def connect_nodes(source_obj, source_plug_name, destination_obj, destination_plug_name):
-        '''
-        @param source_obj: MObject. Source object.
+
+        """"
+        @param source_obj: OpenMaya.MObject. Source object.
         @param source_plug_name: String. Name of plug on parent node.
-        @param destination_obj: MObject. Destination object.
+        @param destination_obj: OpenMaya.MObject. Destination object.
         @param destination_plug_name: String. Name of plug on child node.
-        '''
+        """
+
         source_plug = OpenMayaUtils.get_plug_by_name(source_obj, source_plug_name)
         destination_plug = OpenMayaUtils.get_plug_by_name(destination_obj, destination_plug_name)
         MDGMod = OpenMaya.MDGModifier()
@@ -210,6 +232,14 @@ class OpenMayaUtils:
 
     @staticmethod
     def convert_floats_matrix_to_MMatrix(floats_matrix):
+
+        """
+        Converts matrix of floats to OpenMaya.MMatrix object.
+
+        :param floats_matrix: array of floats
+        :return: OpenMaya.MMatrix object
+        """
+
         if floats_matrix:
             mmatrix = OpenMaya.MMatrix()
             for i in range(4):
@@ -220,6 +250,13 @@ class OpenMayaUtils:
 
     @staticmethod
     def get_obj_floats_transform_matrix(mobject):
+
+        """
+        Returns floats transformation matrix of given object.
+        :param mobject: OpenMaya.MObject to return transformation matrix
+        :return: list of floats with transformation data for given mobject
+        """
+
         if mobject:
             mfn_transform = OpenMaya.MFnTransform(mobject)
             mtranform_matrix = mfn_transform.transformation()
@@ -236,6 +273,12 @@ class OpenMayaUtils:
 
 
 class Field:
+
+    """
+    Class to store playing field data.
+    (polygon mesh of field on which to play tetris)
+    """
+
     number_of_vertices_per_polygon = \
         [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
          4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -473,12 +516,22 @@ class Field:
         self.node_name = self.mfn_dep_node.absoluteName()
 
     def apply_transformation_matrix(self):
+
+        """
+        Applies stored transformation matrix to Field object.
+        """
+
         new_mmatrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(self.transformation_matrix)
         new_mtransformation_matrix = OpenMaya.MTransformationMatrix(new_mmatrix)
         mfn_transform = OpenMaya.MFnTransform(self.field_mobject)
         mfn_transform.set(new_mtransformation_matrix)
 
     def apply_default_shader(self):
+
+        """
+        Applies default shader to created field polygon mesh.
+        """
+
         mfn_dag = OpenMaya.MFnDagNode(self.field_mobject)
         shape_mobj = mfn_dag.child(0)
 
@@ -511,7 +564,6 @@ class TetrisDialog(QtWidgets.QDialog):
             else:
                 self.is_game_paused = True
                 self.pause_label.setVisible(True)
-                self.press_enter_to_start.setVisible(True)
         elif e.key() == 16777220:
             self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             if not self.game_played_currently:
@@ -698,6 +750,7 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def setup_ui_buttons_and_labels(self):
         transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#32a7ff; font-size:13px;"
+        large_label_text_stylesheet = "font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#32a7ff;"
         square_button_size = 48
 
         self.points_label = QLabel("000000", self)
@@ -718,40 +771,27 @@ class TetrisDialog(QtWidgets.QDialog):
         self.pause_label.move(397, 300)
         self.pause_label.setVisible(False)
 
-        self.press_enter_to_start = QLabel("press Enter to continue", self)
-        self.press_enter_to_start.setStyleSheet(transparent_background_color_stylesheet)
-        self.press_enter_to_start.setFixedHeight(50)
-        self.press_enter_to_start.setFixedWidth(250)
-        self.press_enter_to_start.move(435, 325)
-        self.press_enter_to_start.setVisible(False)
-
+        # game over labels
         self.game_over_label = QLabel("Game over", self)
-        self.game_over_label.setStyleSheet(transparent_background_color_stylesheet)
+        self.game_over_label.setStyleSheet("font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#32a7ff;")
         self.game_over_label.setFixedHeight(50)
         self.game_over_label.setFixedWidth(250)
-        self.game_over_label.move(435, 325)
+        self.game_over_label.move(417, 300)
         self.game_over_label.setVisible(False)
 
-        # self.final_score = QLabel("Game over", self)
-        # self.final_score.setStyleSheet(transparent_background_color_stylesheet)
-        # self.final_score.setFixedHeight(50)
-        # self.final_score.setFixedWidth(250)
-        # self.final_score.move(435, 325)
-        # self.final_score.setVisible(False)
-        #
-        # self.enter_to_try_again = QLabel("press Enter to try again", self)
-        # self.enter_to_try_again.setStyleSheet(transparent_background_color_stylesheet)
-        # self.enter_to_try_again.setFixedHeight(50)
-        # self.enter_to_try_again.setFixedWidth(250)
-        # self.enter_to_try_again.move(435, 325)
-        # self.enter_to_try_again.setVisible(False)
-        #
-        # self.escape_to_exit = QLabel("press Escape to exit game", self)
-        # self.escape_to_exit.setStyleSheet(transparent_background_color_stylesheet)
-        # self.escape_to_exit.setFixedHeight(50)
-        # self.escape_to_exit.setFixedWidth(250)
-        # self.escape_to_exit.move(435, 325)
-        # self.escape_to_exit.setVisible(False)
+        self.enter_to_try_again = QLabel("Enter to try again", self)
+        self.enter_to_try_again.setStyleSheet(transparent_background_color_stylesheet)
+        self.enter_to_try_again.setFixedHeight(50)
+        self.enter_to_try_again.setFixedWidth(250)
+        self.enter_to_try_again.move(425, 325)
+        self.enter_to_try_again.setVisible(False)
+
+        self.escape_to_exit = QLabel("Esc to exit", self)
+        self.escape_to_exit.setStyleSheet(transparent_background_color_stylesheet)
+        self.escape_to_exit.setFixedHeight(50)
+        self.escape_to_exit.setFixedWidth(250)
+        self.escape_to_exit.move(425, 340)
+        self.escape_to_exit.setVisible(False)
 
         self.enter_button = QPushButton("Enter", self)
         self.enter_button.setFixedHeight(square_button_size)
@@ -759,7 +799,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.enter_button.move(520, 130)
         self.enter_button.setStyleSheet(self.get_button_stylesheet())
 
-        enter_label = QLabel("Press Enter to start the game", self)
+        enter_label = QLabel("Enter to start the game", self)
         enter_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         enter_label.setStyleSheet(transparent_background_color_stylesheet)
         enter_label.setFixedHeight(200)
@@ -775,7 +815,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.escape_button.move(520, 180)
         self.escape_button.setStyleSheet(self.get_button_stylesheet())
 
-        esc_label = QLabel("Esc to pause the game", self)
+        esc_label = QLabel("Esc to pause the or twice to quit", self)
         esc_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         esc_label.setStyleSheet(transparent_background_color_stylesheet)
         esc_label.setFixedHeight(200)
@@ -1275,6 +1315,9 @@ class TetrisDialog(QtWidgets.QDialog):
         self.locked_cells_dict = dict()
         self.go_next_figure = True
 
+        self.enter_to_try_again.setVisible(False)
+        self.escape_to_exit.setVisible(False)
+
         self.continue_game()
 
     def continue_game(self):
@@ -1291,11 +1334,9 @@ class TetrisDialog(QtWidgets.QDialog):
                 default_cells_available = self.check_default_positions_are_locked()
                 if not default_cells_available:
                     self.is_game_over = True
-                    self.game_over_label.setVisible(False)
-                    # show game over label
-                    # show final scores
-                    # small label underneath in which written enter to retry, escape to close game
-                    print("game over")
+                    self.game_over_label.setVisible(True)
+                    self.enter_to_try_again.setVisible(True)
+                    self.escape_to_exit.setVisible(True)
                     break
 
                 self.remove_complete_lines()
@@ -1588,12 +1629,12 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.go_next_figure = True
                 return_y_collided = True
 
-        # self.update_locked_cells_list(shape_name,
-        #                               self.locked_cells_dict,
-                                      # cleanup_previous_locked_cells=stored_centroids_before_translate)
+        self.update_locked_cells_list(shape_name,
+                                      self.locked_cells_dict,
+                                      cleanup_previous_locked_cells=stored_centroids_before_translate)
         #TODO: Figure out why this not work properly, with this collision data update
         cmds.refresh()
-        self.update_collision_data()
+        # self.update_collision_data()
 
         return return_y_collided
 
@@ -1633,7 +1674,6 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.remove_shapes_line(shapes_list, key, is_line_single_color)
 
     def remove_shapes_line(self, shapes_list, line_y_val, is_line_single_color):
-        print "Remove shapes line function"
         if not shapes_list:
             return
 
@@ -1655,10 +1695,7 @@ class TetrisDialog(QtWidgets.QDialog):
                 shapes_to_move_down.append(shape_to_move_down)
 
         for shape_name in shapes_to_move_down:
-            parent = cmds.listRelatives(shape_name, parent=True)
-            if parent:
-                parent = parent[0]
-                self.move_figure("translateY", -1, shape_name=parent)
+            cmds.move( -1, shape_name, y=True, relative=True)
 
         points_multiplier = 10 - self.speed_multiplier * 5
         earned_points = int(100 * points_multiplier)
@@ -1738,5 +1775,6 @@ def launch_window():
 
     return d
 
-mel.eval("paneLayout -e -manage false $gMainPane")
-launch_window()
+if __name__ == "__main__":
+    mel.eval("paneLayout -e -manage false $gMainPane")
+    launch_window()
