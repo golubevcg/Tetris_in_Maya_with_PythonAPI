@@ -525,6 +525,8 @@ class TetrisDialog(QtWidgets.QDialog):
                 for figure in self.generated_figures:
                     if cmds.objExists(figure):
                         cmds.delete(figure)
+
+                self.points_label.setText("000000")
                 self.start_game()
 
         elif not self.active_figure_name:
@@ -1276,16 +1278,14 @@ class TetrisDialog(QtWidgets.QDialog):
         self.continue_game()
 
     def continue_game(self):
-
         while True:
             self.modelPanel.repaint()
             QApplication.processEvents()
 
-            # TODO: this condition need to be removed, we need to create it based on
-            if self.amount_of_completed_lines != 0 and self.amount_of_completed_lines % 10 == 0 \
-                                                   and self.speed_multiplier > 0:
-                self.speed_multiplier = self.speed_multiplier - 0.2
-                self.move_counter = 0
+            if self.amount_of_completed_lines != 0:
+                if self.amount_of_completed_lines % 10 == 0 and self.speed_multiplier > 0:
+                    self.speed_multiplier = self.speed_multiplier - 0.2
+                    self.move_counter = 0
 
             if self.go_next_figure:
                 default_cells_available = self.check_default_positions_are_locked()
@@ -1295,6 +1295,7 @@ class TetrisDialog(QtWidgets.QDialog):
                     # show game over label
                     # show final scores
                     # small label underneath in which written enter to retry, escape to close game
+                    print("game over")
                     break
 
                 self.remove_complete_lines()
@@ -1587,8 +1588,13 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.go_next_figure = True
                 return_y_collided = True
 
-        self.update_locked_cells_list(shape_name, self.locked_cells_dict, cleanup_previous_locked_cells=stored_centroids_before_translate)
+        # self.update_locked_cells_list(shape_name,
+        #                               self.locked_cells_dict,
+                                      # cleanup_previous_locked_cells=stored_centroids_before_translate)
+        #TODO: Figure out why this not work properly, with this collision data update
         cmds.refresh()
+        self.update_collision_data()
+
         return return_y_collided
 
     def move_figure_to_the_bottom(self):
@@ -1626,8 +1632,49 @@ class TetrisDialog(QtWidgets.QDialog):
 
                 self.remove_shapes_line(shapes_list, key, is_line_single_color)
 
-    def check_shapes_have_same_shader(self, shapes_list):
+    def remove_shapes_line(self, shapes_list, line_y_val, is_line_single_color):
+        print "Remove shapes line function"
+        if not shapes_list:
+            return
 
+        for shape in shapes_list:
+            parent = shape
+            if cmds.nodeType(parent) == "mesh":
+                parent = cmds.listRelatives(parent, parent=True)[0]
+
+            if cmds.objExists(parent):
+                cmds.delete(parent)
+
+        self.update_collision_data()
+
+        shapes_to_move_down = []
+        for centroid_coord in self.locked_cells_dict:
+            y_val = centroid_coord[1]
+            if y_val > line_y_val:
+                shape_to_move_down = self.locked_cells_dict[centroid_coord]["child_shape_name"]
+                shapes_to_move_down.append(shape_to_move_down)
+
+        for shape_name in shapes_to_move_down:
+            parent = cmds.listRelatives(shape_name, parent=True)
+            if parent:
+                parent = parent[0]
+                self.move_figure("translateY", -1, shape_name=parent)
+
+        points_multiplier = 10 - self.speed_multiplier * 5
+        earned_points = int(100 * points_multiplier)
+        if is_line_single_color:
+            earned_points = int(2 * earned_points)
+
+        current_points = self.points_label.text()
+        current_points = int(current_points) + earned_points
+        result_string = str(current_points).zfill(6)
+
+        self.points_label.setText(result_string)
+        self.update_collision_data()
+
+        self.amount_of_completed_lines += 1
+
+    def check_shapes_have_same_shader(self, shapes_list):
         if not shapes_list:
             return
 
@@ -1649,50 +1696,6 @@ class TetrisDialog(QtWidgets.QDialog):
                 return False
 
         return True
-
-    def remove_shapes_line(self, shapes_list, line_y_val, is_line_single_color):
-        if not shapes_list:
-            return
-
-        for shape in shapes_list:
-            parent = shape
-            if cmds.nodeType(parent) == "mesh":
-                parent = cmds.listRelatives(parent, parent=True)[0]
-
-            if cmds.objExists(parent):
-                cmds.delete(parent)
-
-        self.update_collision_data()
-        
-        shapes_to_move_down = []
-        for centroid_coord in self.locked_cells_dict:
-            y_val = centroid_coord[1]
-            if y_val >= line_y_val:
-                shape_to_move_down = self.locked_cells_dict[centroid_coord]["child_shape_name"]
-                shapes_to_move_down.append(shape_to_move_down)
-
-        for shape_name in shapes_to_move_down:
-            parent = cmds.listRelatives(shape_name, parent=True)
-            if parent:
-                parent = parent[0]
-                self.move_figure("translateY", -1, shape_name=parent)
-
-        points_multiplier = 10 - self.speed_multiplier*5
-        earned_points = int(100 * points_multiplier)
-        if is_line_single_color:
-            earned_points = int(2 * earned_points)
-
-        current_points = self.points_label.text()
-        current_points = int(current_points) + earned_points
-        result_string = str(current_points).zfill(6)
-
-        self.points_label.setText(result_string)
-        #TODO: check that this repaint and update is necessary
-        self.points_label.repaint()
-        self.modelPanel.update()
-        self.update_collision_data()
-
-        self.amount_of_completed_lines += 1
 
     def retry_game(self):
         if self.generated_figures:
@@ -1721,6 +1724,7 @@ class TetrisDialog(QtWidgets.QDialog):
             temp_dict = {"parent_transform_name":parent, 
 			             "child_shape_name":shape}
             self.locked_cells_dict[xy_centroid] = temp_dict
+        print "self.locked_cells_dict:", self.locked_cells_dict
 
 
 def launch_window():
