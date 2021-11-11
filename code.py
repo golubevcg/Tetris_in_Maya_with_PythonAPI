@@ -551,11 +551,22 @@ class Field:
 class TetrisDialog(QtWidgets.QDialog):
 
     def closeEvent(self, e):
+
+        """
+        Close event function
+        """
+
         self.is_game_paused = True
         self.close_game()
         super(TetrisDialog, self).closeEvent(e)
 
     def keyPressEvent(self, e):
+
+        """
+        Any key pressed event function
+        """
+
+        # Esc button hotkey
         if e.key() == 16777216:
             self.escape_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             if self.is_game_paused:
@@ -564,6 +575,7 @@ class TetrisDialog(QtWidgets.QDialog):
             else:
                 self.is_game_paused = True
                 self.pause_label.setVisible(True)
+        # enter button hotkey
         elif e.key() == 16777220:
             self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             if not self.game_played_currently:
@@ -587,18 +599,23 @@ class TetrisDialog(QtWidgets.QDialog):
             return
         elif self.is_game_paused:
             return
+        # left arrow hotkey
         elif e.key() == 16777234:
             self.left_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("translateX")
+        # right arrow hotkey
         elif e.key() == 16777236:
             self.right_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("translateX", transform_value=1)
+        # top arrow hotkey
         elif e.key() == 16777235:
             self.up_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("rotateZ", transform_value=90)
+        # down arrow hotkey
         elif e.key() == 16777237:
             self.down_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure("rotateZ", transform_value=-90)
+        # space hotkey
         elif e.key() == 32:
             self.space_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
             self.move_figure_to_the_bottom()
@@ -671,11 +688,14 @@ class TetrisDialog(QtWidgets.QDialog):
 
         self.cameraName = cmds.listRelatives(self.camera_transform_name, children=True, shapes=True)[0]
 
+        # setup viewport
         uuid_test = uuid.uuid4()
-        self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]), label="Tetris playground", cam=self.cameraName)
+        self.modelPanelName = cmds.modelPanel("customModelPanel_%s" % (str(uuid_test)[0:6]),
+                                                                label="Tetris playground", cam=self.cameraName)
 
-        cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all", displayAppearance="smoothShaded",
-                         cameras=False, wireframeOnShaded=True, shadows=True, headsUpDisplay=False, grid=1)
+        cmds.modelEditor(self.modelPanelName, e=1, rnm="vp2Renderer", displayLights="all",
+                         displayAppearance="smoothShaded", cameras=False, wireframeOnShaded=True,
+                         shadows=True, headsUpDisplay=False, grid=1)
 
         cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=False, barLayout=False)
 
@@ -709,6 +729,12 @@ class TetrisDialog(QtWidgets.QDialog):
         self.pre_setup_tetris()
 
     def pre_setup_viewport_colors(self):
+
+        """
+        Function stores current maya viewport colors to restore them during window closing
+        also changes viewport global colors and
+        """
+
         self.current_background_color = cmds.displayRGBColor("background", q=True)
         cmds.displayRGBColor("background", 0, 0, 0)
 
@@ -730,6 +756,11 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.displayColor("polymesh", self.color_index)
 
     def revert_viewport_colors(self):
+
+        """
+        Returns global viewport colors to the state they were at init state of script launching.
+        """
+
         self.current_background_color = cmds.displayRGBColor("background", q=True)
         cmds.displayRGBColor("background", self.current_background_color[0],
                                            self.current_background_color[1],
@@ -745,12 +776,28 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.displayColor("grid", self.current_grid_index)
         cmds.displayColor("polymesh", self.current_polymesh_index)
 
+        #TODO: update gradient colors
+
     def get_button_stylesheet(self, background_color="trasnparent", border_color="#32a7ff", text_color="#32a7ff"):
-        return "QPushButton {background-color: %s; border-style: solid; border-width: 2px; border-color:%s; border-radius:4px; color:%s; font-weight:bold; font-size:13px}"%(background_color, border_color, text_color)
+
+        """
+        Returns stylesheet string to change QPushButton appearance.
+        :param background_color: color to set as background color of button
+        :param border_color: color to set as border color of button
+        :param text_color: color to set as text color of button
+        """
+
+        return "QPushButton {background-color: %s; border-style: solid; border-width: 2px; " \
+               "border-color:%s; border-radius:4px; color:%s; " \
+               "font-weight:bold; font-size:13px}"%(background_color, border_color, text_color)
 
     def setup_ui_buttons_and_labels(self):
+
+        """
+        Creates all ui labels and buttons.
+        """
+
         transparent_background_color_stylesheet = "background-color:rgba(0, 0, 0, 0);color:#32a7ff; font-size:13px;"
-        large_label_text_stylesheet = "font-family:Roboto; font-size:25pt; font-weight:400; font-style:bold;background-color:rgba(0, 0, 0, 0);color:#32a7ff;"
         square_button_size = 48
 
         self.points_label = QLabel("000000", self)
@@ -904,12 +951,16 @@ class TetrisDialog(QtWidgets.QDialog):
         space_help_label.setAutoFillBackground(False)
 
     def close_game(self):
+
+        """
+        Function launched during window closing, returns viewport state to init state.
+        """
+
         cmds.modelPanel(self.modelPanelName, edit=True, menuBarVisible=True, barLayout=True)
         cmds.modelEditor(self.default_model_panel, e=1, allObjects=True)
         mel.eval("paneLayout -e -manage true $gMainPane")
         cmds.modelPanel(self.default_model_panel, e=True, cam="persp")
 
-        print "self.lambert1_color_value:", self.lambert1_color_value
         mel.eval('setAttr "lambert1.color" -type double3 {0} {1} {1} ;'.format(self.lambert1_color_value[0],
                                                                                self.lambert1_color_value[1],
                                                                                self.lambert1_color_value[2]))
@@ -921,6 +972,12 @@ class TetrisDialog(QtWidgets.QDialog):
                 pass
 
     def pre_setup_tetris(self):
+
+        """
+        Function launched before game is started.
+        Generates field on which game must be played, setups viewport lights,
+        cameras and generates all the shaders.
+        """
 
         self.lambert1_color_value = cmds.getAttr("lambert1.color")[0]
         mel.eval('setAttr "lambert1.color" -type double3 0.025974 0.025974 0.025974 ;')
@@ -937,6 +994,11 @@ class TetrisDialog(QtWidgets.QDialog):
         self.shaders_shading_groups_list = self.generate_all_shaders()
 
     def start_game(self):
+
+        """
+        Function starts tetris game, creates all game needed variables.
+        """
+
         self.game_played_currently = True
         self.figures_mesh_creation_data = {'figure_0_mesh_data': {'center_shape_data': [
                                             {'number_of_vertices_per_polygon': [4, 4, 4, 4, 4, 4],
@@ -1321,6 +1383,14 @@ class TetrisDialog(QtWidgets.QDialog):
         self.continue_game()
 
     def continue_game(self):
+
+        """
+        Main game function, which consists of while cycle with most of playing logic.
+        each iteration is 1 / fps seconds ( fps = 60).
+        if amount of completed lines during game is divides by 10 without remainder then speed will be increased
+        in 20%.
+        """
+
         while True:
             self.modelPanel.repaint()
             QApplication.processEvents()
@@ -1353,18 +1423,25 @@ class TetrisDialog(QtWidgets.QDialog):
                 break
 
     def showEvent(self, event):
+
+        """
+        Event, launched during window appear
+        """
+
         super(TetrisDialog, self).showEvent(event)
-        # maya can lag in how it repaints UI. Force it to repaint
-        # when we show the window.
         self.modelPanel.repaint()
 
     def setup_viewport_lights(self):
-        global mfn_transform
-        dagModifier = OpenMaya.MDagModifier()
-        light_mobj = dagModifier.createNode('transform')
+
+        """
+        Function generates all viewport lights.
+        """
+
+        dag_modifier = OpenMaya.MDagModifier()
+        light_mobj = dag_modifier.createNode('transform')
         point_light_name = 'pointLight1'
-        dagModifier.renameNode(light_mobj, point_light_name)
-        dagModifier.doIt()
+        dag_modifier.renameNode(light_mobj, point_light_name)
+        dag_modifier.doIt()
         # create and setup point light
         mfn_point_light = OpenMaya.MFnPointLight()
         mfn_point_light.create(light_mobj)
@@ -1378,9 +1455,9 @@ class TetrisDialog(QtWidgets.QDialog):
         mfn_transform = OpenMaya.MFnTransform(light_mobj)
         mfn_transform.set(mlight_mtrasformation_matrix)
 
-        ambient_light_mobj = dagModifier.createNode('transform')
-        dagModifier.renameNode(ambient_light_mobj, 'ambientLight1')
-        dagModifier.doIt()
+        ambient_light_mobj = dag_modifier.createNode('transform')
+        dag_modifier.renameNode(ambient_light_mobj, 'ambientLight1')
+        dag_modifier.doIt()
         ambient_light_mfn_dep_node = OpenMaya.MFnDependencyNode(ambient_light_mobj)
         self.created_nodes.append(ambient_light_mfn_dep_node.absoluteName())
 
@@ -1390,6 +1467,10 @@ class TetrisDialog(QtWidgets.QDialog):
         mfn_ambient_light.setIntensity(0.400)
 
     def setup_camera(self, camera_name, camera_transform):
+
+        """
+        Function generates camera viewport through the eyes of which game will be played.
+        """
 
         mobj = OpenMayaUtils.make_depend_node(camera_name)
         # create camera
@@ -1414,7 +1495,10 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.select(cam_name)
         cmds.viewFit()
 
-        cam_transformation_matrix = [[0.974370064785234, -1.734723475976807e-18, -0.22495105434387022, 0.0], [-0.027174389963974324, 0.9926767021559224, -0.11770521452734141, 0.0], [0.22330367077257082, 0.12080134517811304, 0.9672344625904589, 0.0], [18.902075772515936, 18.976222815997183, 73.13078115900157, 1.0]]
+        cam_transformation_matrix = [[0.974370064785234, -1.734723475976807e-18, -0.22495105434387022, 0.0],
+                                     [-0.027174389963974324, 0.9926767021559224, -0.11770521452734141, 0.0],
+                                     [0.22330367077257082, 0.12080134517811304, 0.9672344625904589, 0.0],
+                                     [18.902075772515936, 18.976222815997183, 73.13078115900157, 1.0]]
         cam_m_matrix = OpenMayaUtils.convert_floats_matrix_to_MMatrix(cam_transformation_matrix)
         cam_mtransformation_matrix = OpenMaya.MTransformationMatrix(cam_m_matrix)
         mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
@@ -1422,18 +1506,44 @@ class TetrisDialog(QtWidgets.QDialog):
         self.created_nodes.append(mdag_node.fullPathName())
 
     def create_shader(self, name, node_type="lambert"):
+
+        """
+        Function creates shader with given name and\pr type.
+        By default lambert type shder will be generated.
+
+        :param name: string name of the shader
+        :param node_type: string type of the shader
+        :return material: string created material name
+        :return sg: string created shading group
+
+        """
+
         material = cmds.shadingNode(node_type, name=name, asShader=True)
         sg = cmds.sets(name="%sSG"%name, empty=True, renderable=True, noSurfaceShader=True)
         cmds.connectAttr("%s.outColor" % material, "%s.surfaceShader" % sg)
         return material, sg
 
     def create_shader_with_color(self, color, shader_name):
-        # color = [55, 0, 0]
+
+        """
+        Creates shader with given name and sets color to shader.
+
+        :param color: desired color to set (3 float list)
+        :param shader_name: name of the shader which will be created
+        :return material_name: string created material name
+        :return sg_name: string created shading group
+        """
+
         material_name, sg_name = self.create_shader(shader_name)
         cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
         return material_name, sg_name
 
     def generate_all_shaders(self):
+
+        """
+        Function generates all shaders with colors, which needed for game.
+        :return: list of strings with created shading group names.
+        """
 
         shading_groups_list = []
 
@@ -1465,26 +1575,41 @@ class TetrisDialog(QtWidgets.QDialog):
         return shading_groups_list
 
     def create_figures(self, figures_creation_data, parent):
-        if figures_creation_data:
-            for data in figures_creation_data:
-                number_of_vertices_per_polygon = data["number_of_vertices_per_polygon"]
-                vertex_indexes_per_polygon = data["vertex_indexes_per_polygon"]
-                vertex_positions_raw_data = data["vertex_positions"]
-                polygon_count = data["numPolygons"]
 
-                shape_transform_mobj = OpenMayaUtils.create_mesh(polygon_count,
-                                          vertex_positions_raw_data,
-                                          number_of_vertices_per_polygon,
-                                          vertex_indexes_per_polygon
-                                          )
-                transform_mfn_dag = OpenMaya.MFnDagNode(shape_transform_mobj)
-                cmds.xform(transform_mfn_dag.fullPathName(), centerPivots=True)
+        """
+        Creates playing figures based on given figures_creation_data
+        :param figures_creation_data: list with data to recreate figure
+        :param parent: parent transform to parent figure which will be created
+        """
 
-                mfn_dag_modifier = OpenMaya.MDagModifier()
-                mfn_dag_modifier.reparentNode(shape_transform_mobj, parent)
-                mfn_dag_modifier.doIt()
+        if not figures_creation_data:
+            return
+
+        for data in figures_creation_data:
+            number_of_vertices_per_polygon = data["number_of_vertices_per_polygon"]
+            vertex_indexes_per_polygon = data["vertex_indexes_per_polygon"]
+            vertex_positions_raw_data = data["vertex_positions"]
+            polygon_count = data["numPolygons"]
+
+            shape_transform_mobj = OpenMayaUtils.create_mesh(polygon_count,
+                                                             vertex_positions_raw_data,
+                                                             number_of_vertices_per_polygon,
+                                                             vertex_indexes_per_polygon
+                                                             )
+            transform_mfn_dag = OpenMaya.MFnDagNode(shape_transform_mobj)
+            cmds.xform(transform_mfn_dag.fullPathName(), centerPivots=True)
+
+            mfn_dag_modifier = OpenMaya.MDagModifier()
+            mfn_dag_modifier.reparentNode(shape_transform_mobj, parent)
+            mfn_dag_modifier.doIt()
 
     def generate_random_figure(self):
+
+        """
+        Generates random playing figure based on all figures data.
+        :return: string created figure name
+        """
+
         rand_mesh_index = randint(0, len(self.figures_mesh_creation_data) - 1)
         figure_transform_mfn_dag = OpenMaya.MFnDagNode()
         figure_transform_mfn_dag.create("transform", "figure_%s" % str(rand_mesh_index))
@@ -1519,6 +1644,13 @@ class TetrisDialog(QtWidgets.QDialog):
         return figure_dag_name
 
     def get_shape_xy_centroid(self, mesh_name):
+
+        """
+        Returns centroid x and y of given shape (in world coordinates).
+        :param mesh_name: name of the mesh
+        :return: int x, int y values of shape centroid coordinates
+        """
+
         if not mesh_name or not cmds.objExists(mesh_name):
             return
 
@@ -1536,6 +1668,14 @@ class TetrisDialog(QtWidgets.QDialog):
         return rounded_x_value, rounded_y_value
 
     def get_all_child_shapes_xy_centroids_list(self, parent_transform, result_dict):
+
+        """
+        Returns centroid world coordinates (only x and y) for each child shape of given parent transform.
+        Stores finded data in given result_dict
+        :param parent_transform: parent node to find child shapes
+        :param result_dict: dictionary to store founded data
+        """
+
         if not parent_transform:
             return
 
@@ -1545,10 +1685,17 @@ class TetrisDialog(QtWidgets.QDialog):
 
         for child in child_shapes:
             current_xy_centroid = self.get_shape_xy_centroid(child)
-            temp_dict = {"parent_transform_name":parent_transform, "child_shape_name":child}
+            temp_dict = {"parent_transform_name": parent_transform, "child_shape_name": child}
             result_dict[current_xy_centroid] = temp_dict
 
-    def check_mesh_update_allowed(self, mesh_name, locked_cells_dict):
+    def check_figure_update_allowed(self, mesh_name, locked_cells_dict):
+
+        """
+        Checks if already moved figure centroid position intersect with other figures on the field.
+        :param mesh_name: string name of the figure
+        :param locked_cells_dict: dictionary with locked cells (which contains centroids as keys)
+        :return: bool, True if there is no intersection, False otherwise
+        """
 
         # TODO: fix figure stop moving during collision with another figure
         child_shapes = self.get_all_descendent_child_shapes(mesh_name)
@@ -1558,7 +1705,8 @@ class TetrisDialog(QtWidgets.QDialog):
         for child in child_shapes:
             child_cords = self.get_shape_xy_centroid(child)
 
-            if tuple(child_cords) in locked_cells_dict.keys() and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
+            if tuple(child_cords) in locked_cells_dict.keys() \
+                                   and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
                 return False, False
 
             if not self.min_y < child_cords[1] < self.max_y:
@@ -1570,6 +1718,12 @@ class TetrisDialog(QtWidgets.QDialog):
         return True, False
 
     def get_all_descendent_child_shapes(self, transform_name):
+
+        """
+        Returns all childs shapes recursivly.
+        :param transform_name: string name of the transform
+        :return: list with strings of founded shape names
+        """
 
         if not transform_name:
             return
@@ -1597,6 +1751,10 @@ class TetrisDialog(QtWidgets.QDialog):
 
     def get_main_maya_window(self):
 
+        """
+        Returns Maya main window as QWidget.
+        """
+
         maya_main_window_pointer = OpenMayaUI.MQtUtil.mainWindow()
         maya_qtwidget_main_window = wrapInstance(long(maya_main_window_pointer), QWidget)
 
@@ -1622,7 +1780,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.get_all_child_shapes_xy_centroids_list(shape_name, stored_centroids_before_translate)
         cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
-        transform_update_allowed, x_axis_collision = self.check_mesh_update_allowed(shape_name, self.locked_cells_dict)
+        transform_update_allowed, x_axis_collision = self.check_figure_update_allowed(shape_name, self.locked_cells_dict)
         if not transform_update_allowed:
             cmds.setAttr(current_figure_translate_y_attr_name, current_position)
             if not x_axis_collision:
@@ -1758,7 +1916,7 @@ class TetrisDialog(QtWidgets.QDialog):
             if parent:
                 parent = parent[0]
 
-            temp_dict = {"parent_transform_name":parent, 
+            temp_dict = {"parent_transform_name":parent,
 			             "child_shape_name":shape}
             self.locked_cells_dict[xy_centroid] = temp_dict
         print "self.locked_cells_dict:", self.locked_cells_dict
@@ -1774,6 +1932,7 @@ def launch_window():
     d.show()
 
     return d
+
 
 if __name__ == "__main__":
     mel.eval("paneLayout -e -manage false $gMainPane")
