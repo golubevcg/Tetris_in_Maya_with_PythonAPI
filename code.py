@@ -574,16 +574,17 @@ class TetrisDialog(QtWidgets.QDialog):
                 self.close()
             else:
                 self.is_game_paused = True
+                self.game_over_label.setVisible(False)
                 self.pause_label.setVisible(True)
         # enter button hotkey
         elif e.key() == 16777220:
             self.enter_button.setStyleSheet(self.get_button_stylesheet(background_color="#32a7ff", text_color="black"))
+            self.game_over_label.setVisible(False)
             if not self.game_played_currently:
                 self.start_game()
             elif self.is_game_paused:
                 self.is_game_paused = False
                 self.pause_label.setVisible(False)
-                self.press_enter_to_start.setVisible(False)
                 self.continue_game()
             elif self.is_game_over:
                 for figure in self.generated_figures:
@@ -597,7 +598,7 @@ class TetrisDialog(QtWidgets.QDialog):
             return
         elif self.is_game_paused:
             return
-        elif self.is_game_paused:
+        elif self.is_game_over:
             return
         # left arrow hotkey
         elif e.key() == 16777234:
@@ -755,6 +756,10 @@ class TetrisDialog(QtWidgets.QDialog):
         self.current_polymesh_index = cmds.displayColor("polymesh", q=True)
         cmds.displayColor("polymesh", self.color_index)
 
+        self.viewport_gradient = cmds.displayPref(q=True, displayGradient=True)
+        if self.viewport_gradient:
+            cmds.displayPref(displayGradient=False)
+
     def revert_viewport_colors(self):
 
         """
@@ -776,9 +781,10 @@ class TetrisDialog(QtWidgets.QDialog):
         cmds.displayColor("grid", self.current_grid_index)
         cmds.displayColor("polymesh", self.current_polymesh_index)
 
-        #TODO: update gradient colors
+        if self.viewport_gradient:
+            cmds.displayPref(displayGradient=True)
 
-    def get_button_stylesheet(self, background_color="trasnparent", border_color="#32a7ff", text_color="#32a7ff"):
+    def get_button_stylesheet(self, background_color="transparent", border_color="#32a7ff", text_color="#32a7ff"):
 
         """
         Returns stylesheet string to change QPushButton appearance.
@@ -1472,6 +1478,9 @@ class TetrisDialog(QtWidgets.QDialog):
         Function generates camera viewport through the eyes of which game will be played.
         """
 
+        if not camera_name or not camera_transform:
+            return
+
         mobj = OpenMayaUtils.make_depend_node(camera_name)
         # create camera
         mfn_cam_obj = OpenMaya.MFnCamera(mobj)
@@ -1504,6 +1513,7 @@ class TetrisDialog(QtWidgets.QDialog):
         mfn_transform = OpenMaya.MFnTransform(transform_cam_mobj)
         mfn_transform.set(cam_mtransformation_matrix)
         self.created_nodes.append(mdag_node.fullPathName())
+        cmds.camera(mdag_node.fullPathName(), edit=True, lockTransform=True)
 
     def create_shader(self, name, node_type="lambert"):
 
@@ -1517,6 +1527,9 @@ class TetrisDialog(QtWidgets.QDialog):
         :return sg: string created shading group
 
         """
+
+        if not name:
+            raise ValueError("Empty shader name received! Cannot create shader!")
 
         material = cmds.shadingNode(node_type, name=name, asShader=True)
         sg = cmds.sets(name="%sSG"%name, empty=True, renderable=True, noSurfaceShader=True)
@@ -1533,6 +1546,9 @@ class TetrisDialog(QtWidgets.QDialog):
         :return material_name: string created material name
         :return sg_name: string created shading group
         """
+
+        if not color or not shader_name:
+            raise ValueError("Cannot create shader with color, empty arguments!")
 
         material_name, sg_name = self.create_shader(shader_name)
         cmds.setAttr(material_name + ".color", color[0], color[1], color[2], type="double3")
@@ -1582,7 +1598,7 @@ class TetrisDialog(QtWidgets.QDialog):
         :param parent: parent transform to parent figure which will be created
         """
 
-        if not figures_creation_data:
+        if not figures_creation_data or not parent:
             return
 
         for data in figures_creation_data:
@@ -1688,26 +1704,35 @@ class TetrisDialog(QtWidgets.QDialog):
             temp_dict = {"parent_transform_name": parent_transform, "child_shape_name": child}
             result_dict[current_xy_centroid] = temp_dict
 
-    def check_figure_update_allowed(self, mesh_name, locked_cells_dict):
+    def check_figure_update_allowed(self, mesh_name, locked_cells_dict, stored_centroids_before_translate):
 
         """
         Checks if already moved figure centroid position intersect with other figures on the field.
         :param mesh_name: string name of the figure
         :param locked_cells_dict: dictionary with locked cells (which contains centroids as keys)
-        :return: bool, True if there is no intersection, False otherwise
+        :return: bool, bool (x and y) True if there is no intersection, False otherwise (first boo
         """
 
-        # TODO: fix figure stop moving during collision with another figure
         child_shapes = self.get_all_descendent_child_shapes(mesh_name)
         if not child_shapes:
             return False
 
-        for child in child_shapes:
-            child_cords = self.get_shape_xy_centroid(child)
+        shape_name_prev_centr_dict = dict()
+        for val in stored_centroids_before_translate:
+            dct = stored_centroids_before_translate[val]
+            child_shape_name = dct['child_shape_name']
+            shape_name_prev_centr_dict[child_shape_name] = val
 
+        for child in child_shapes:
+            prev_centroid = shape_name_prev_centr_dict[child]
+            child_cords = self.get_shape_xy_centroid(child)
             if tuple(child_cords) in locked_cells_dict.keys() \
                                    and mesh_name != locked_cells_dict[child_cords]["parent_transform_name"]:
-                return False, False
+                if child_cords[1] == prev_centroid[1]:
+                    # this means that figured moved by x coord and collided only x
+                    return False, True
+                else:
+                    return False, False
 
             if not self.min_y < child_cords[1] < self.max_y:
                 return False, False
@@ -1780,7 +1805,9 @@ class TetrisDialog(QtWidgets.QDialog):
         self.get_all_child_shapes_xy_centroids_list(shape_name, stored_centroids_before_translate)
         cmds.setAttr(current_figure_translate_y_attr_name, current_position + transform_value)
 
-        transform_update_allowed, x_axis_collision = self.check_figure_update_allowed(shape_name, self.locked_cells_dict)
+        transform_update_allowed, x_axis_collision = self.check_figure_update_allowed(shape_name,
+                                                                                      self.locked_cells_dict,
+                                                                                      stored_centroids_before_translate)
         if not transform_update_allowed:
             cmds.setAttr(current_figure_translate_y_attr_name, current_position)
             if not x_axis_collision:
@@ -1790,9 +1817,7 @@ class TetrisDialog(QtWidgets.QDialog):
         self.update_locked_cells_list(shape_name,
                                       self.locked_cells_dict,
                                       cleanup_previous_locked_cells=stored_centroids_before_translate)
-        #TODO: Figure out why this not work properly, with this collision data update
         cmds.refresh()
-        # self.update_collision_data()
 
         return return_y_collided
 
@@ -1919,7 +1944,6 @@ class TetrisDialog(QtWidgets.QDialog):
             temp_dict = {"parent_transform_name":parent,
 			             "child_shape_name":shape}
             self.locked_cells_dict[xy_centroid] = temp_dict
-        print "self.locked_cells_dict:", self.locked_cells_dict
 
 
 def launch_window():
