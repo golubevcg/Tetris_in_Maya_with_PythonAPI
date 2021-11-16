@@ -592,8 +592,8 @@ class TetrisDialog(QtWidgets.QDialog):
                         cmds.delete(figure)
 
                 self.points_label.setText("000000")
+                self.is_game_over = False
                 self.start_game()
-
         elif not self.active_figure_name:
             return
         elif self.is_game_paused:
