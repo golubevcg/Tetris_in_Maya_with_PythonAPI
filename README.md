@@ -12,8 +12,8 @@ List of technologies and frameworks, which were used in-game:
 - Mel
 
 Tetris game inside Autodesk Maya. 
->Be careful, do not use in production computers. \
-Tetris during execution time will override Maya colors, \
+>Be careful, i do not recommend launching this in production computers. \
+Tetris during execution time will override Maya colors, 
 yes after closing the Tetris window -  it will reset to your settings (saved before launch), \
 but if something will go wrong, you will have a crash - your settings can
 be lost.
