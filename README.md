@@ -18,7 +18,7 @@ yes after closing the Tetris window -  it will reset to your settings (saved bef
 but if something will go wrong, you will have a crash - your settings can
 be lost.
 
-To launch simply paste in Maya script editor and launch this code.
+To launch simply paste in Maya script editor and launch code.py
 
 Game controls:
 - Left / Right arrows to move an active figure
