@@ -11,6 +11,7 @@ List of technologies and frameworks, which were used in-game:
 - PySide2
 - Mel
 
+Tested in Maya 2020.\
 Tetris game inside Autodesk Maya. 
 >Be careful, I do not recommend launching this in production computers. \
 Tetris during execution time will override Maya colors, 
