@@ -1,11 +1,7 @@
 import maya.OpenMaya as OpenMaya
-import maya.OpenMayaUI as OpenMayaUI
 import itertools
 from random import randint
-import maya.cmds as cmds
-import maya.mel as mel
 import time
-from functools import partial
 
 try:
     from PySide2.QtCore import *
